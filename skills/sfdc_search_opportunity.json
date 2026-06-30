@@ -1,0 +1,117 @@
+{
+  "name": "SFDC: Search Opportunity",
+  "description": "Search for an opportunity in Salesforce by DID number using the global search bar. Enters the DID, selects the matching result, then opens the opportunity record.",
+  "created": "2026-06-29",
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "https://ciscosales.lightning.force.com"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "click",
+      "selector": "input[name='identifier']",
+      "value": null,
+      "text": ""
+    },
+    {
+      "action": "manual_input",
+      "selector": "input[name='identifier']",
+      "value": "gzyra@cisco.com",
+      "press_enter": true,
+      "human_in_the_loop": false
+    },
+    {
+      "action": "wait",
+      "seconds": 35
+    },
+    {
+      "action": "click",
+      "selector": "button.slds-button_neutral.search-button"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "parameter_input",
+      "selector": "input[placeholder='Search...'], input[placeholder='Search']",
+      "param_name": "did",
+      "param_description": "DID number to search for in Salesforce",
+      "value": "",
+      "press_enter": true
+    },
+    {
+      "action": "wait",
+      "seconds": 3
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "table.slds-table tbody tr th span a",
+      "timeout_s": 40,
+      "state": "attached"
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "click",
+      "selector": "table.slds-table tbody tr:first-child th span a"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": ".slds-page-header, .slds-page-header__title",
+      "timeout_s": 20
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    },
+    {
+      "action": "click",
+      "selector": "[data-tab-value='flexipage_tab3']"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": ".slds-tabs_default__content.slds-show",
+      "timeout_s": 20,
+      "state": "visible"
+    },
+    {
+      "action": "wait",
+      "seconds": 5
+    }
+  ],
+  "outputs": [
+    {
+      "name": "opportunity_details",
+      "type": "selector",
+      "selector": ".slds-tabs_default__content.slds-show",
+      "label": "Opportunity Details",
+      "parse": true,
+      "fields": [
+        {"name": "account_name",                    "description": "Account Name"},
+        {"name": "deal_id",                         "description": "Deal id / DID number"},
+        {"name": "forecasting_position",            "description": "Forecasting Position"},
+        {"name": "opportunity_owner",               "description": "Opportunity Owner"},
+        {"name": "opportunity_name",                "description": "Opportunity Name"},
+        {"name": "stage",                           "description": "Stage"},
+        {"name": "forecast_status",                 "description": "Forecast Status"},
+        {"name": "opportunity_notes",               "description": "Oppty Notes / Next Steps — full text of all dated entries"},
+        {"name": "close_date",                      "description": "Close Date"},
+        {"name": "prior_contract_expiration_date",  "description": "Prior Contract Expiration Date"},
+        {"name": "renewal_quarter_due",             "description": "Renewal Quarter Due"},
+        {"name": "be_group",                        "description": "BE Group"},
+        {"name": "renewal_opp_sav",                 "description": "Renewal Opp SAV"},
+        {"name": "service_amount_tcv",              "description": "Service Amount TCV ($000s)"},
+        {"name": "service_amount_acv",              "description": "Service Amount ACV ($000s)"},
+        {"name": "service_atr",                     "description": "Service ATR ($000s)"},
+        {"name": "expected_services_attrition",     "description": "Expected Services Attrition ($000s)"}
+      ]
+    }
+  ]
+}

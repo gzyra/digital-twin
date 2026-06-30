@@ -1,0 +1,97 @@
+{
+  "name": "SFDC: Update Renewal Stage",
+  "description": "Open a Salesforce opportunity by name and update its renewal stage field. Use this when you need to change the pipeline stage of a renewal deal.",
+  "created": "2026-06-29",
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "https://ciscosales.lightning.force.com/lightning/o/Opportunity/list"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "input[type='search'], input.search-input, .forceSearchInput input, input[placeholder*='Search']",
+      "timeout_s": 15
+    },
+    {
+      "action": "parameter_input",
+      "selector": "input[type='search'], input.search-input, .forceSearchInput input, input[placeholder*='Search']",
+      "param_name": "opportunity_name",
+      "param_description": "Opportunity or account name to locate in Salesforce",
+      "value": "",
+      "press_enter": true
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": ".forceListViewManagerList a, table.slds-table a, .listViewContent a",
+      "timeout_s": 20
+    },
+    {
+      "action": "wait_and_click_last",
+      "selector": ".forceListViewManagerList a[data-recordid], table.slds-table tbody tr:first-child a",
+      "settle_seconds": 2
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": ".record-detail-body, .flexipagePageContainer",
+      "timeout_s": 20
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "action": "click",
+      "selector": "button[title='Edit Stage'], a[data-field='StageName'], .slds-form-element__label + .slds-form-element__control button"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": ".select, select[name='StageName'], .slds-combobox__container",
+      "timeout_ms": 10000
+    },
+    {
+      "action": "parameter_input",
+      "selector": "select[name='StageName'], .slds-combobox__input",
+      "param_name": "renewal_stage",
+      "param_description": "New renewal stage value (e.g. 'Closed Won', 'Renewal - In Progress', 'Renewal - At Risk')",
+      "value": "Closed Won",
+      "press_enter": false
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "click",
+      "selector": "button[title='Save'], .slds-modal__footer button.slds-button_brand, button.slds-button_brand[type='submit']"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": ".record-detail-body, .toastMessage",
+      "timeout_s": 15
+    },
+    {
+      "action": "wait",
+      "seconds": 2
+    }
+  ],
+  "inputs": [
+    {
+      "name": "opportunity_name",
+      "label": "Opportunity / Account Name",
+      "default": ""
+    },
+    {
+      "name": "renewal_stage",
+      "label": "New Renewal Stage",
+      "default": "Closed Won"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "confirmation",
+      "type": "selector",
+      "selector": ".toastMessage, .slds-notify__content, .record-detail-body",
+      "label": "Save Confirmation"
+    }
+  ]
+}

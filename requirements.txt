@@ -1,0 +1,7 @@
+chainlit
+litellm
+playwright
+pyyaml
+requests
+langchain-core
+langchain-openai

@@ -1,0 +1,71 @@
+{
+  "name": "SFDC: Search Opportunity",
+  "description": "Search for an opportunity in Salesforce by DID number using the global search bar. Enters the DID, selects the matching result, then opens the opportunity record.",
+  "created": "2026-06-29",
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "https://ciscosales.lightning.force.com"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "button.slds-button_neutral.search-button",
+      "timeout_s": 20
+    },
+    {
+      "action": "click",
+      "selector": "button.slds-button_neutral.search-button"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "lightning-primitive-input-simple input",
+      "timeout_s": 15
+    },
+    {
+      "action": "click",
+      "selector": "lightning-primitive-input-simple input"
+    },
+    {
+      "action": "input_text",
+      "selector": "lightning-primitive-input-simple input",
+      "param_name": "did",
+      "value": "",
+      "param_description": "DID number to search for in Salesforce",
+      "human_in_the_loop": true,
+      "template": "{did}"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "table.slds-table tbody tr th span a, force-search-result-list-item a",
+      "timeout_s": 20
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "click",
+      "selector": "table.slds-table tbody tr:first-child th span a"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": ".slds-page-header, .slds-page-header__title",
+      "timeout_s": 20
+    }
+  ],
+  "inputs": [
+    {
+      "name": "did",
+      "label": "DID Number",
+      "default": ""
+    }
+  ],
+  "outputs": [
+    {
+      "name": "opportunity_details",
+      "type": "selector",
+      "selector": ".slds-page-header, .forceDetailPanelDesktop",
+      "label": "Opportunity Details"
+    }
+  ]
+}

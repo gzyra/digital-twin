@@ -1,0 +1,410 @@
+/* Custom sidebar for skills + right-side dashboard panel */
+
+/* ---- Left sidebar (skills) ---- */
+.custom-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 240px;
+  height: 100vh;
+  background: #1a1a1a !important;
+  border-right: 1px solid #333 !important;
+  padding: 16px !important;
+  overflow-y: auto !important;
+  z-index: 1000 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #e0e0e0 !important;
+  display: block !important;
+  visibility: visible !important;
+}
+
+.custom-sidebar h3 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-section {
+  margin-bottom: 24px;
+}
+
+.sidebar-section ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar-section li {
+  padding: 7px 10px;
+  margin: 4px 0;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-section li:hover {
+  background: #0084d4;
+  border-color: #0099ff;
+  color: #fff;
+}
+
+.sidebar-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #888;
+  font-style: italic;
+}
+
+/* ---- Right dashboard panel (compact default) ---- */
+.custom-dashboard {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 340px;
+  height: 100vh;
+  background: #111 !important;
+  border-left: 1px solid #2a2a2a !important;
+  padding: 14px 12px !important;
+  overflow-y: auto !important;
+  z-index: 1000 !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #ccc !important;
+  display: block !important;
+  visibility: visible !important;
+  transition: width 0.25s ease, left 0.25s ease, right 0.25s ease,
+              top 0.25s ease, height 0.25s ease, border-radius 0.25s ease,
+              box-shadow 0.25s ease;
+}
+
+/* ---- Expanded / centered overlay mode ---- */
+.custom-dashboard.db-expanded {
+  left: 50% !important;
+  right: auto !important;
+  top: 50% !important;
+  width: min(1100px, 92vw) !important;
+  height: min(88vh, 900px) !important;
+  transform: translate(-50%, -50%);
+  border-left: none !important;
+  border: 1px solid #3a3a3a !important;
+  border-radius: 10px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
+  z-index: 3000 !important;
+  padding: 20px 20px !important;
+  overflow-y: auto !important;
+}
+
+/* Backdrop for expanded mode */
+.db-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2999;
+  cursor: pointer;
+  animation: dbFadeIn 0.2s ease;
+}
+
+@keyframes dbFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 6px;
+}
+
+.dashboard-header h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+
+.db-header-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.db-refresh,
+.db-expand {
+  background: #1e3a4f;
+  border: 1px solid #2a6090;
+  border-radius: 4px;
+  color: #7ec8f0;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 4px 8px;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.db-refresh:hover,
+.db-expand:hover {
+  background: #0084d4;
+  color: #fff;
+  border-color: #0099ff;
+}
+
+/* In expanded mode, make the table fill available width */
+.db-expanded .db-html-table {
+  min-width: unset;
+  width: 100%;
+}
+
+.db-expanded .db-tbl-scroll {
+  overflow-x: auto;
+}
+
+.db-expanded .db-card {
+  margin-bottom: 20px;
+}
+
+.dashboard-empty {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.dashboard-empty code {
+  background: #2a2a2a;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #aaa;
+  font-style: normal;
+}
+
+/* ---- Dashboard card states ---- */
+.db-loading {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.db-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #333;
+  border-top-color: #0099ff;
+  border-radius: 50%;
+  animation: db-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes db-spin {
+  to { transform: rotate(360deg); }
+}
+
+.db-card-loading {
+  border-color: #1e3a4f;
+}
+
+.db-card-loading .db-card-header {
+  color: #888;
+}
+
+.db-no-output {
+  padding: 10px 12px;
+  font-size: 11px;
+  color: #555;
+  font-style: italic;
+}
+
+/* ---- Dashboard cards ---- */
+.db-card {
+  background: #1c1c1c;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.db-card-header {
+  background: #222;
+  border-bottom: 1px solid #2a2a2a;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e0e0e0;
+  text-transform: capitalize;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.db-ts {
+  font-weight: 400;
+  font-size: 10px;
+  color: #666;
+}
+
+.db-card-body {
+  padding: 4px 0;
+}
+
+/* Key-value rows (non-table outputs) */
+.db-kv {
+  display: flex;
+  padding: 4px 8px;
+  gap: 8px;
+  border-bottom: 1px solid #1e1e1e;
+  font-size: 11px;
+}
+
+.db-kv .db-key {
+  color: #888;
+  white-space: nowrap;
+  flex: 0 0 38%;
+  text-transform: capitalize;
+}
+
+.db-kv .db-val {
+  color: #ddd;
+  word-break: break-word;
+  flex: 1;
+}
+
+/* Table output label */
+.db-output-label {
+  padding: 5px 8px 2px;
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Table metadata row (row count + scroll hint) */
+.db-tbl-meta {
+  padding: 2px 8px 4px;
+  font-size: 10px;
+  color: #555;
+}
+
+/* Horizontally scrollable table container */
+.db-tbl-scroll {
+  overflow-x: auto;
+  padding: 0 4px 6px;
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
+}
+
+.db-tbl-scroll::-webkit-scrollbar { height: 4px; }
+.db-tbl-scroll::-webkit-scrollbar-track { background: transparent; }
+.db-tbl-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+/* The actual HTML table rendered from markdown */
+.db-html-table {
+  border-collapse: collapse;
+  min-width: 600px;   /* forces horizontal scroll in compact mode */
+  font-size: 11px;
+  table-layout: fixed;
+}
+
+/* In expanded mode show more text per cell */
+.db-expanded .db-html-table {
+  font-size: 12px;
+}
+
+.db-html-table th {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  padding: 5px 8px;
+  color: #aaa;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.db-html-table td {
+  border: 1px solid #222;
+  padding: 4px 8px;
+  color: #ddd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.db-expanded .db-html-table th,
+.db-expanded .db-html-table td {
+  max-width: 200px;
+  padding: 5px 10px;
+}
+
+.db-html-table tr:nth-child(even) td {
+  background: #181818;
+}
+
+.db-html-table tr:hover td {
+  background: #1e2a35;
+}
+
+.db-raw {
+  font-size: 10px;
+  color: #777;
+  padding: 6px 8px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+/* ---- Hide raw dashboard-data code blocks from the chat ---- */
+pre:has(> code.language-dashboard-data) {
+  display: none !important;
+}
+
+/* ---- Main chat area — squeezed between both panels ---- */
+.cl-main-container,
+.cl-chat-container,
+[class*="main-container"],
+[class*="chat-container"],
+[class*="thread-container"],
+[class*="messages-container"] {
+  margin-left: 240px !important;
+  margin-right: 320px !important;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 1200px) {
+  .custom-dashboard { width: 280px; }
+  .cl-main-container,
+  .cl-chat-container,
+  [class*="main-container"],
+  [class*="chat-container"],
+  [class*="thread-container"],
+  [class*="messages-container"] { margin-left: 240px !important; margin-right: 280px !important; }
+}
+
+@media (max-width: 900px) {
+  .custom-sidebar { width: 200px; }
+  .custom-dashboard { display: none !important; }
+  .cl-main-container,
+  .cl-chat-container,
+  [class*="main-container"],
+  [class*="chat-container"],
+  [class*="thread-container"],
+  [class*="messages-container"] { margin-left: 200px !important; margin-right: 0 !important; }
+}

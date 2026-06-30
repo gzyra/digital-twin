@@ -1,0 +1,81 @@
+{
+  "name": "CX AIA DID Overview",
+  "created": "2026-06-17T12:56:16.678865+00:00",
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "https://cxassistant.cisco.com/"
+    },
+    {
+      "action": "click",
+      "selector": "textarea",
+      "value": null,
+      "text": "",
+      "url": "https://cxassistant.cisco.com/threads"
+    },
+    {
+      "action": "parameter_input",
+      "selector": "textarea",
+      "param_name": "deal_id",
+      "param_description": "The deal or opportunity ID number (digits only)",
+      "template": "Summarize the case notes on a deal {deal_id}",
+      "value": "69285625",
+      "press_enter": true
+    },
+    {
+      "action": "wait",
+      "seconds": 120
+    },
+    {
+      "action": "wait_and_click_last",
+      "selector": "pol-ai-chat-message-actions button:nth-child(3)",
+      "scroll_into_view": true,
+      "scroll_block": "center",
+      "settle_seconds": 2,
+      "target": "last"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "did_details",
+      "type": "clipboard",
+      "label": "Did Details",
+      "parse": true,
+      "fields": [
+        {
+          "name": "deal_id",
+          "description": "Deal or opportunity ID number"
+        },
+        {
+          "name": "customer_name",
+          "description": "Customer or account name"
+        },
+        {
+          "name": "deal_stage",
+          "description": "Current stage or status of the deal"
+        },
+        {
+          "name": "deal_value",
+          "description": "Total deal value or ARR"
+        },
+        {
+          "name": "close_date",
+          "description": "Expected or actual close date"
+        },
+        {
+          "name": "owner",
+          "description": "Deal owner or account executive name"
+        },
+        {
+          "name": "product_family",
+          "description": "Main product or solution family"
+        },
+        {
+          "name": "summary",
+          "description": "Brief summary of the deal overview"
+        }
+      ]
+    }
+  ],
+  "description": "Retrieve the Deal Pulse notes and insights for a specific DID from CX AIA. Use this to check recorded risks, flags and recommendations for a deal."
+}

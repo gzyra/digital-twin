@@ -1,0 +1,12 @@
+{
+  "skill_name": "cxaia_did_notes_73606380",
+  "captured_at": "2026-06-29T14:42:21.847144+00:00",
+  "outputs": {
+    "did_details": "## Deal Summary – Opportunity Deal ID: **73606380**\n\n### 1️⃣ Opportunity Overview\n\n| Field | Value |\n|-------|--------|\n| **Customer Name** | ARMY CORPS OF ENGINEERS US (USACE) |\n| **Customer ID (CAV_BU_ID)** | 113005 |\n| **Opportunity URL** | https://ciscosales.lightning.force.com/lightning/r/Opportunity/006e6000006UFXiAAO/view |\n| **Overall Deal ATR (OPPTY_LINE_PRIOR_ATR)** | $19645.53K |\n| **Expected Total ATR (OPPTY_LINE_EXPECTED_ATR)** | $19622.98K |\n| **Product Mapping Group** | *(No Product Mapping Group listed)* |\n\n---\n\n### 2️⃣ CSS Case Notes Summary\n\nA query was executed to retrieve all CSS (Customer Success Specialist) case details associated with **Opportunity Deal ID 73606380**, including:\n\n- OPPORTUNITY_DEAL_ID  \n- CAV_BU_ID  \n- CUSTOMER_NAME  \n- CASE_NAME  \n- ARCHITECTURE  \n- TECHNOLOGY  \n- CASE_NUMBER  \n- CREATION_DATE  \n- CLOSURE_DATE  \n- COMMENT_BODY  \n- RESOLUTION_SUMMARY  \n- PROBLEM_DESCRIPTION  \n- ACTIONS_TAKEN  \n- OUTCOMES_ACHIEVED  \n- CASE_RESOLUTION  \n- STATUS  \n\n**Result:**  \nNo CSS case records were found associated with Opportunity Deal ID **73606380**.\n\n---\n\n## ✅ Consolidated Conclusion\n\n- The deal exists and is active in the system for **ARMY CORPS OF ENGINEERS US (USACE)**.\n- The opportunity represents approximately **$19.6M in ATR value**.\n- There are **no recorded CSS case notes** tied to this deal in the available data.\n- No key issues, actions taken, or case statuses are currently documented at the CSS case level for this opportunity.\n\n---\n\n**Data Filters Applied:** Opportunity Deal ID is 73606380\n\nWould you like me to provide a concise summary of all case notes for deal 73606380, highlighting key issues, actions taken, and current status?",
+    "deal_id": "73606380",
+    "customer_name": "ARMY CORPS OF ENGINEERS US (USACE)",
+    "deal_stage": "Active",
+    "deal_value": "19645.53",
+    "summary": "Active opportunity for ARMY CORPS OF ENGINEERS US (USACE) (Deal ID 73606380) with ATR value of approximately $19.6M. Customer ID 113005. No CSS cases are recorded for this deal."
+  }
+}

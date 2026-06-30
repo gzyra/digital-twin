@@ -1,0 +1,107 @@
+{
+  "name": "SFDC: Search Opportunity",
+  "description": "Search for an opportunity in Salesforce by DID number using the global search bar. Enters the DID, selects the matching result, then opens the opportunity record.",
+  "created": "2026-06-29",
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "https://ciscosales.lightning.force.com"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "input[name='identifier']",
+      "timeout_s": 20
+    },
+    {
+      "action": "type_into",
+      "selector": "input[name='identifier']",
+      "value": "gzyra@cisco.com",
+      "press_enter": false
+    },
+    {
+      "action": "click",
+      "selector": "input[type='submit'][value='Next']"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "input[type='email']",
+      "timeout_s": 15
+    },
+    {
+      "action": "type_into",
+      "selector": "input[type='email']",
+      "value": "gzyra@cisco.com",
+      "press_enter": false
+    },
+    {
+      "action": "click",
+      "selector": ".c--primary"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "text=Yes, this is my device",
+      "timeout_s": 20
+    },
+    {
+      "action": "click",
+      "selector": "text=Yes, this is my device"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "button.slds-button_neutral.search-button",
+      "timeout_s": 30
+    },
+    {
+      "action": "click",
+      "selector": "button.slds-button_neutral.search-button"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "input[placeholder='Search...'], input[placeholder='Search']",
+      "timeout_s": 15
+    },
+    {
+      "action": "type_into",
+      "selector": "input[placeholder='Search...'], input[placeholder='Search']",
+      "param_name": "did",
+      "template": "{did}",
+      "value": "",
+      "param_description": "DID number to search for in Salesforce",
+      "press_enter": true,
+      "human_in_the_loop": true
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "table.slds-table tbody tr th span a, force-search-result-list-item a",
+      "timeout_s": 20
+    },
+    {
+      "action": "wait",
+      "seconds": 1
+    },
+    {
+      "action": "click",
+      "selector": "table.slds-table tbody tr:first-child th span a"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": ".slds-page-header, .slds-page-header__title",
+      "timeout_s": 20
+    }
+  ],
+  "inputs": [
+    {
+      "name": "did",
+      "label": "DID Number",
+      "default": ""
+    }
+  ],
+  "outputs": [
+    {
+      "name": "opportunity_details",
+      "type": "selector",
+      "selector": ".slds-page-header, .forceDetailPanelDesktop",
+      "label": "Opportunity Details"
+    }
+  ]
+}

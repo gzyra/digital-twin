@@ -1,0 +1,13 @@
+{
+  "skill_name": "cxaia_did_notes_56320931",
+  "captured_at": "2026-06-29T14:36:38.982200+00:00",
+  "outputs": {
+    "did_details": "## Deal Case Notes Summary\n\n**Customer:** NEW YORK CITY HEALTH AND HOSPITALS CORPORATION  \n**Deal ID:** 56320931  \n**CAV_BU_ID:** 102043  \n\n---\n\n### Opportunity Notes\n\nThe following renewal notes are associated with this deal:\n\n> **5/4/2026 (Dave Goueta):** Booked under WOID 28229576015646 - co-termed to 6/30/27.  \n> **Deleted Notes-00915807**  \n> **5/4/2026 (Dave Goueta):** Booked under WOID 28229576015646 - co-termed to 6/30/27.\n\nNo additional opportunity comments were recorded.\n\n---\n\n## Key Themes\n\n- **Booking Confirmation:** The deal was successfully booked.\n- **Work Order Reference:** Booked under **WOID 28229576015646**.\n- **Co-Terming Strategy:** The opportunity was **co-termed to 6/30/27**, aligning the contract end date with an existing agreement.\n- **Duplicate Entry:** The same booking note appears twice, along with a reference to a deleted note (`Deleted Notes-00915807`).\n\n---\n\n## Risks Identified\n\n- **No explicit risks documented** in the available notes.\n- The presence of a deleted note reference (`Deleted Notes-00915807`) suggests there may have been prior revisions or adjustments, but no risk details are provided in the current record.\n\n---\n\n## Actions Taken\n\n- Deal booked on **May 4, 2026**.\n- Associated to **Work Order ID 28229576015646**.\n- Contract term aligned (co-termed) through **June 30, 2027**.\n\n---\n\n## Open Issues\n\n- **No open issues documented** in the available case notes.\n- No outstanding actions or concerns are recorded in the opportunity notes or comments fields.\n\n---\n\n**Data Filters Applied:** Opportunity Deal ID is 56320931  \n\nWould you like me to provide a concise executive-style summary of all case notes for deal 56320931, highlighting the most important themes, potential risks, actions taken, and any follow-up considerations?",
+    "deal_id": "56320931",
+    "customer_name": "NEW YORK CITY HEALTH AND HOSPITALS CORPORATION",
+    "deal_stage": "Booked",
+    "close_date": "2026-05-04",
+    "owner": "Dave Goueta",
+    "summary": "Deal booked for NYC Health and Hospitals Corporation. WOID 28229576015646; co-termed to 6/30/27; renewal notes indicate booking and term alignment; duplicate note present; no explicit risks documented. Booking date: 2026-05-04."
+  }
+}

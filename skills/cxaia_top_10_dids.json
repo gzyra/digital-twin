@@ -1,0 +1,44 @@
+{
+  "name": "TOP 10 DIDs by ATR",
+  "created": "2026-06-25",
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "https://cxassistant.cisco.com/"
+    },
+    {
+      "action": "click",
+      "selector": "textarea",
+      "value": null,
+      "text": "",
+      "url": "https://cxassistant.cisco.com/threads"
+    },
+    {
+      "action": "manual_input",
+      "selector": "textarea",
+      "value": "Show me my ATR and list my top 10 deals by ATR within 6-18 months",
+      "press_enter": true,
+      "human_in_the_loop": false
+    },
+    {
+      "action": "wait",
+      "seconds": 120
+    },
+    {
+      "action": "wait_and_click_last",
+      "selector": "pol-ai-chat-message-actions button:nth-child(3)",
+      "scroll_into_view": true,
+      "scroll_block": "center",
+      "settle_seconds": 2,
+      "target": "last"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "atr_table",
+      "type": "clipboard",
+      "label": "Top 10 ATR Deals"
+    }
+  ],
+  "description": "Fetch the top 10 deals by ATR (Amount to Renew) from CX AIA. Returns a table of deal IDs, account names, and renewal values. Run this first to get your deal list."
+}

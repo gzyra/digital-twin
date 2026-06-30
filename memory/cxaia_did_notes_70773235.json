@@ -1,0 +1,9 @@
+{
+  "skill_name": "cxaia_did_notes_70773235",
+  "captured_at": "2026-06-29T14:39:27.922199+00:00",
+  "outputs": {
+    "did_details": "## Case Notes Summary for Deal ID 70773235\n\nI searched for all available case notes associated with **Opportunity Deal ID: 70773235**, including:\n\n- CS Console cases  \n- TAC cases  \n- Support cases  \n\nThe search included the following data fields:\n- OPPORTUNITY_DEAL_ID  \n- CAV_BU_ID (Customer ID)  \n- CUSTOMER_NAME  \n- CASE_NAME  \n- CASE_NUMBER  \n- CASE_TYPE (CS Console, Support, TAC)  \n- CREATION_DATE  \n- CLOSURE_DATE  \n- STATUS  \n- COMMENT_BODY  \n- RESOLUTION_SUMMARY  \n- PROBLEM_DESCRIPTION  \n- ACTIONS_TAKEN  \n- OUTCOMES_ACHIEVED  \n\n### Result\n\nNo case records were found associated with **Deal ID 70773235**.\n\nThis means:\n- There are no CS Console case notes tied to this opportunity.\n- There are no TAC case notes tied to this opportunity.\n- There are no Support case notes tied to this opportunity.\n\n**Data Filters Applied:** Opportunity Deal ID is 70773235  \n\nWould you like me to check whether this deal has any open opportunities, renewal risks, or related activity records instead?",
+    "deal_id": "70773235",
+    "summary": "No case notes found for Opportunity Deal ID 70773235; no CS Console, TAC, or Support cases linked."
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "CX AIA All DID Notes",
+  "type": "batch",
+  "created": "2026-06-26",
+  "description": "Run cxaia_did_notes for every DID listed in the cxaia_top_10_dids dashboard result. Results are saved individually and summarised in a combined dashboard card.",
+  "source_skill": "cxaia_top_10_dids",
+  "source_output": "atr_table",
+  "target_skill": "cxaia_did_notes",
+  "target_param": "deal_id"
+}
