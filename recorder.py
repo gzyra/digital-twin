@@ -1,4 +1,5 @@
-"""Record a browser flow → skill JSON:  python recorder.py my_skill_name"""
+"""Record a browser flow → skill JSON:  python recorder.py my_skill_name [start_url] [--auth sf_state.json]"""
+import argparse
 import sys
 import time
 from threading import Event
@@ -16,7 +17,14 @@ RECORDER_JS = r"""
 function cssPath(el) {
   if (el.dataset && el.dataset.testid) return `[data-testid="${el.dataset.testid}"]`;
   if (el.id) return `#${el.id}`;
-  if (el.getAttribute && el.getAttribute('name')) return `[name="${el.getAttribute('name')}"]`;
+  const name = el.getAttribute && el.getAttribute('name');
+  if (name) return `[name="${name}"]`;
+  const ariaLabel = el.getAttribute && el.getAttribute('aria-label');
+  if (ariaLabel) return `[aria-label="${ariaLabel}"]`;
+  const dataLabel = el.getAttribute && el.getAttribute('data-label');
+  if (dataLabel) return `[data-label="${dataLabel}"]`;
+  const tabValue = el.getAttribute && el.getAttribute('data-tab-value');
+  if (tabValue) return `[data-tab-value="${tabValue}"]`;
   return el.tagName ? el.tagName.toLowerCase() : 'unknown';
 }
 
@@ -101,13 +109,14 @@ def _dedup_input_steps(steps: list[dict]) -> list[dict]:
     return result
 
 
-def record_skill(name: str, start_url: str | None = None, stop_event: Event | None = None) -> str:
+def record_skill(name: str, start_url: str | None = None, stop_event: Event | None = None, auth_state: str | None = None) -> str:
     target_url = _resolve_start_url(start_url)
+    session_file = auth_state or CFG["auth_state"]
     steps = []
 
     with sync_playwright() as p:
       browser = p.chromium.launch(headless=False, channel="chrome")
-      ctx = browser.new_context(storage_state=CFG["auth_state"])
+      ctx = browser.new_context(storage_state=session_file)
       page = ctx.new_page()
       page.add_init_script(RECORDER_JS)
       steps.append({"action": "navigate", "url": target_url})
@@ -115,6 +124,13 @@ def record_skill(name: str, start_url: str | None = None, stop_event: Event | No
 
       if stop_event is None:
         input("Perform your flow, then press Enter to stop recording...")
+        # Drain buffered events before the browser closes.
+        try:
+          captured = page.evaluate("() => (window.__dtDrainEvents ? window.__dtDrainEvents() : [])")
+          if isinstance(captured, list):
+            steps.extend(captured)
+        except Exception:
+          pass
       else:
         while not stop_event.is_set():
           time.sleep(0.2)
@@ -134,15 +150,20 @@ def record_skill(name: str, start_url: str | None = None, stop_event: Event | No
     steps = _dedup_input_steps(steps)
     print(f"Reduced to {len(steps)} steps. Detecting parameters via LLM...")
     steps = detect_parameters(steps)
-    path = save_skill(name, steps)
+    path = save_skill(name, steps, auth_state=auth_state if auth_state and auth_state != CFG.get("auth_state") else None)
     print(f"Saved skill -> {path}")
     return path
 
 
 def main():
-  name = sys.argv[1] if len(sys.argv) > 1 else "untitled_skill"
-  start_url = sys.argv[2] if len(sys.argv) > 2 else None
-  record_skill(name, start_url)
+  parser = argparse.ArgumentParser(description="Record a browser flow → skill JSON")
+  parser.add_argument("name", nargs="?", default="untitled_skill")
+  parser.add_argument("start_url", nargs="?", default=None)
+  parser.add_argument("--auth", default=None, metavar="STATE_FILE",
+                      help="Auth state file to use (default: config.yaml auth_state). "
+                           "Example: --auth sf_state.json")
+  args = parser.parse_args()
+  record_skill(args.name, args.start_url, auth_state=args.auth)
 
 
 if __name__ == "__main__":

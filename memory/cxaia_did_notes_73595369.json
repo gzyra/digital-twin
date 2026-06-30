@@ -1,8 +1,12 @@
 {
   "skill_name": "cxaia_did_notes_73595369",
-  "captured_at": "2026-06-29T14:16:22.454631+00:00",
+  "captured_at": "2026-06-30T12:27:07.674289+00:00",
   "outputs": {
-    "did_details": "73595369",
-    "deal_id": "73595369"
+    "did_details": "I could not find any CSS/TAC case notes or case records associated with deal ID 73595369 under the current data scope.\n\nDeal details found for opportunity deal ID 73595369:\n\n| Customer Name | CAV_BU_ID | Opportunity Deal URL | Overall Deal ATR | Opportunity Expected Total ATR | Product Mapping Group |\n|---|---|---|---|---|---|\n| PENTAGON | 1808182 | https://ciscosales.lightning.force.com/lightning/r/Opportunity/006e6000006RcKhAAK/view | $88463.08K | $88463.08K | EN Switching, EN Wireless, SD-WAN and Routing |\n\nNo matching open or closed CSS/TAC case notes, comments, resolutions, problem descriptions, or actions taken were returned for this deal.\n\n**Data Filters Applied:** Opportunity Deal ID is 73595369\n\nWould you like me to check for related renewal risk, install base, or opportunity activity details for deal 73595369?",
+    "deal_id": "73595369",
+    "customer_name": "PENTAGON",
+    "deal_value": "88463080",
+    "product_family": "EN Switching, EN Wireless, SD-WAN and Routing",
+    "summary": "Deal 73595369 for customer PENTAGON. Overall Deal ATR / Opportunity Expected Total ATR: $88,463.08K. Product Mapping Group: EN Switching, EN Wireless, SD-WAN and Routing. No matching CSS/TAC case notes found in data scope."
   }
 }

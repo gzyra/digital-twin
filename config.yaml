@@ -1,15 +1,52 @@
-# Local runtime configuration for digital-twin.
-# Replace placeholders with your values.
+# digital-twin — runtime configuration
+# Copy config.yaml.example to config.yaml and adjust values for your environment.
 
-start_url: "https://cxassistant.cisco.com/"
+# ── User identity ─────────────────────────────────────────────────────────────
+user:
+  email: "gzyra@cisco.com"         # auto-filled in login prompts during auth capture
+
+# ── Auth session capture ───────────────────────────────────────────────────────
+# Defines how each browser session is captured and where it is saved.
+#
+#   python auth_capture.py              capture all sessions in config order
+#   python auth_capture.py cxaia        capture only the primary SSO session
+#   python auth_capture.py sf           capture only Salesforce (requires cxaia)
+#
+# type: manual      — browser opens, email is auto-filled, user completes login/MFA,
+#                     then presses Enter in terminal to save.
+# type: sso_derived — loads 'load_from' session, navigates to url, SSO auto-completes.
+#
+auth_captures:
+  cxaia:
+    description: "Primary Cisco SSO session — CX AIA portal"
+    url: "https://cxassistant.cisco.com/"
+    state_file: "state.json"
+    type: "manual"
+    username_selector: "input[name='identifier'], input[type='email']"
+    domain_hint: "cisco.com"
+    keep_domains: ["cisco.com"]        # only Cisco SSO cookies; strip analytics/tracking
+  sf:
+    description: "Salesforce Lightning — derived via Cisco SSO (no extra login needed)"
+    url: "https://ciscosales.lightning.force.com"
+    state_file: "sf_state.json"
+    type: "sso_derived"
+    load_from: "state.json"
+    ready_selector: ".slds-global-header"
+    domain_hint: "salesforce.com"
+    keep_domains: ["salesforce.com", "force.com"]  # SF session only; drop all Cisco/tracking cookies
+
+# ── Runtime defaults ──────────────────────────────────────────────────────────
+# Used by recorder.py and replay.py — point to the primary session file.
 auth_state: "state.json"
+start_url: "https://cxassistant.cisco.com/"
+
 headless: false
 debug: true
 skills_dir: "skills"
 action_timeout_ms: 60000
 load_timeout_ms: 60000
 
-# Common URLs for quick reference during skill recording
+# Common URLs shown as quick options during skill recording
 common_urls:
   SalesForce: "https://ciscosales.lightning.force.com/lightning"
   "CX AIA": "https://cxassistant.cisco.com/"
@@ -17,29 +54,28 @@ common_urls:
 
 record_urls: []
 
-# Skills to run automatically at startup (headless, using recorded default values).
-# Their outputs are displayed in the dashboard panel.
+# ── Startup skills ────────────────────────────────────────────────────────────
+# Run automatically on app start (headless). Results shown in the dashboard panel.
 startup_skills:
   - cxaia_top_10_dids
+  - cxaia_top_5_dids_by_close_date
 
-# Directory for persisted skill results (memory).
 memory_dir: "memory"
-
-# How many hours a cached startup skill result stays valid before re-running.
 startup_skill_ttl_hours: 24
 
+# ── LLM ──────────────────────────────────────────────────────────────────────
 # llm_provider: litellm | circuit
 llm_provider: "circuit"
 
-# Used by litellm mode
+# Used when llm_provider == litellm
 model: "gpt-5-nano"
 
-# Used by circuit mode
+# Used when llm_provider == circuit (Cisco BridgeIT)
 circuit:
   endpoint: "https://chat-ai.cisco.com"
   api_version: "2024-12-01-preview"
   model: "gpt-5-nano"
-  # Prefer setting these via env vars:
+  # Prefer setting these via env vars (loaded by initapp.py from ~/.env/greg_ai_env.json):
   # BRIDGEIT_CLIENT_ID, BRIDGEIT_CLIENT_SEC, BRIDGEIT_KEY, BRIDGEIT_USERID
   client_id: ""
   client_secret: ""

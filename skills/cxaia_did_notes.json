@@ -23,8 +23,10 @@
       "press_enter": true
     },
     {
-      "action": "wait",
-      "seconds": 120
+      "action": "wait_for_selector",
+      "selector": "pol-ai-chat-message-actions button:nth-child(3)",
+      "state": "visible",
+      "timeout_s": 120
     },
     {
       "action": "wait_and_click_last",

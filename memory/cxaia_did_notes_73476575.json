@@ -1,11 +1,12 @@
 {
   "skill_name": "cxaia_did_notes_73476575",
-  "captured_at": "2026-06-29T14:25:01.547475+00:00",
+  "captured_at": "2026-06-30T12:33:00.233990+00:00",
   "outputs": {
-    "did_details": "## Deal Case Notes Summary\n\n**Deal ID:** 73476575  \n**Customer Name:** KDDI CORPORATION__IP CORE__JP  \n**CAV_BU_ID:** 1279822  \n\n### Opportunity / CS Console Notes\n\nThe following notes were found associated with this deal:\n\n- **2026/04/03 (Nakano Kentaro):** Sogo FY27 support ATR.\n\nThere were no additional opportunity comments populated for this deal.\n\n---\n\nIf you would like, I can also retrieve and summarize any related CSS or support cases (including detailed case comments and closure notes) tied to deal 73476575.",
+    "did_details": "Note: CS Console data is associated with CAV_BU_ID (not Deal ID directly). The Deal ID 73476575 maps to CAV_BU_ID 1279822 for customer KDDI CORPORATION__IP CORE__JP, and the notes below are based on this customer.\n\nDeal Overview\n\n| Field | Value |\n|---|---|\n| Deal ID | 73476575 |\n| Customer Name | KDDI CORPORATION__IP CORE__JP |\n| CAV_BU_ID | 1279822 |\n| Fiscal Period | FY2026 Q3 |\n| Deal Stage | 1 - Qualify |\n| Deal Status | Open |\n| Overall Qualification Score | 30% |\n| Overall Deal ATR | $34409.34K |\n| Opportunity Expected Total ATR | $34409.34K |\n| Record Created | 2026-04-03 14:14:44 UTC |\n| Opportunity URL | https://ciscosales.lightning.force.com/lightning/r/Opportunity/006e60000060FLUAA2/view |\n\nCustomer Success / Case Notes Summary\n\n| Note Category | Details |\n|---|---|\n| Primary Note | “2026/04/03 (Nakano Kentaro) : Sogo FY27 support ATR.” |\n| Competitor Information | None recorded |\n| Competition Notes | No details provided |\n| Champion Notes | No details provided |\n| Economic Buyer Notes | No details provided |\n| Implicated Pain Notes | No details provided |\n| Decision Process Notes | No details provided |\n\nKey Takeaways\n- The opportunity is still in an early qualification phase.\n- The only documented note references “Sogo FY27 support ATR,” entered by Nakano Kentaro on 2026/04/03.\n- No additional MEDDPICC qualification details, customer pain points, competitive positioning, or buying process information were captured.\n- The deal currently has a low qualification maturity score of 30%.\n- No CS Console pulse activity, TAC incidents, support case sentiment, survey feedback, or related technical case notes were identified for this deal/customer context.\n\nWould you like me to provide a concise summary of all case notes for deal ID 73476575?",
     "deal_id": "73476575",
     "customer_name": "KDDI CORPORATION__IP CORE__JP",
-    "owner": "Nakano Kentaro",
-    "summary": "Sogo FY27 support ATR."
+    "deal_stage": "1 - Qualify",
+    "deal_value": "34409.34",
+    "summary": "Deal 73476575 for KDDI CORPORATION__IP CORE__JP is in early qualification (Stage: 1 - Qualify; Status: Open) with an opportunity value of 34,409.34K. Documented note references Sogo FY27 support ATR; qualification score is 30%; no additional MEDDPICC details available."
   }
 }

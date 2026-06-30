@@ -7,3 +7,6 @@ pyvenv.cfg
 .chainlit/
 config.yaml.example
 state.json
+sf_state.json
+core/__pycache__/*
+memory/*

@@ -11,12 +11,14 @@ SKILLS_DIR = _CFG["skills_dir"]
 os.makedirs(SKILLS_DIR, exist_ok=True)
 
 
-def save_skill(name: str, steps: list[dict], inputs: list[dict] | None = None, outputs: list[dict] | None = None) -> str:
+def save_skill(name: str, steps: list[dict], inputs: list[dict] | None = None, outputs: list[dict] | None = None, auth_state: str | None = None) -> str:
     skill = {
         "name": name,
         "created": datetime.now(timezone.utc).isoformat(),
         "steps": steps,
     }
+    if auth_state:
+        skill["auth_state"] = auth_state
     if inputs:
         skill["inputs"] = inputs
     if outputs:

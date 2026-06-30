@@ -1,5 +1,3 @@
-# https://github.com/Gerry-Aballa/Playwright-Py-Cheatsheet
-
 # RRA Digital Twin — AI Agent
 
 Browser automation skill recorder and replay UI with an integrated LLM chat assistant, live dashboard, and execution audit log.
@@ -22,10 +20,10 @@ The agent lets you:
 |---|---|
 | `app.py` | Chainlit UI — skill execution, dashboard, chat, memory integration |
 | `recorder.py` | Records browser actions and saves a skill JSON |
-| `auth_capture.py` | Saves authenticated browser session to storage-state file |
+| `auth_capture.py` | Saves authenticated browser sessions; filters to SSO-required cookies only |
 | `initapp.py` | Launcher — loads env vars then starts the Chainlit app |
 | `config.yaml` | Runtime configuration |
-| `core/replay.py` | Skill execution engine (Playwright) |
+| `core/replay.py` | Skill execution engine (async Playwright) |
 | `core/memory.py` | Persistent skill result cache (24 h TTL by default) |
 | `core/skills.py` | Skill metadata helpers + `skill_catalog()` for LLM intent routing |
 | `core/llm.py` | LLM integration (BridgeIT / LiteLLM) + `select_skill_by_intent()` |
@@ -40,8 +38,8 @@ The agent lets you:
 
 | Skill file | What it does |
 |---|---|
-| `sfdc_search_opportunity` | Search Salesforce for a deal or opportunity by name |
-| `sfdc_update_renewal_stage` | Open a Salesforce opportunity and update its renewal stage |
+| `sfdc_search_opportunity` | Search Salesforce by DID, open the opportunity record, navigate to Details tab |
+| `sfdc_update_renewal_stage` | Open a Salesforce opportunity by DID and update its renewal stage |
 | `cxaia_top_10_dids` | Fetch top 10 deals by ATR from CX AIA (runs at startup) |
 | `cxaia_did_overview` | Full risk/adoption overview for a specific DID in CX AIA |
 | `cxaia_did_notes` | Deal Pulse notes and insights for a specific DID |
@@ -49,10 +47,8 @@ The agent lets you:
 
 ## Requirements
 
-- Python 3.13 (recommended, based on this environment).
+- Python 3.13 (recommended).
 - Playwright browser binaries installed.
-
-Install dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -61,243 +57,250 @@ python -m playwright install
 
 ## Configuration
 
-1. Copy example config and edit values:
+1. Copy example config and edit:
 
 ```bash
 cp config.yaml.example config.yaml
 ```
 
-2. Update at least:
+2. Update at minimum:
 
-- `start_url` — target app URL.
-- `common_urls` (optional) — dictionary of common URLs for quick reference during skill recording:
-  ```yaml
-  common_urls:
-    SalesForce: "https://ciscosales.lightning.force.com/lightning"
-    "CX AIA": "https://cxassistant.cisco.com/"
-    Google: "https://www.google.com"
-  ```
-- `auth_state` — file path for saved login session (e.g. `state.json`).
-- `llm_provider`:
-  - `litellm` for standard LiteLLM path, or
-  - `circuit` for Cisco BridgeIT.
-- `startup_skills` — list of skill names to run automatically at startup:
-  ```yaml
-  startup_skills:
-    - cxaia_top_10_dids
-  ```
-- `memory_dir` — directory for cached skill outputs (default: `memory`).
-- `startup_skill_ttl_hours` — how long a cached result is considered fresh before re-running the skill (default: `24`).
+- `user.email` — auto-filled into login forms during auth capture.
+- `auth_state` — path to the primary saved session file (e.g. `state.json`).
+- `start_url` — default URL opened when recording a new skill.
+- `llm_provider`: `litellm` or `circuit` (Cisco BridgeIT).
+- `startup_skills` — list of skill names run automatically at launch.
 
-3. For BridgeIT, set credentials in `~/.env/greg_ai_env.json`.
+3. For BridgeIT, set credentials in `~/.env/greg_ai_env.json`:
 
-The launcher (`initapp.py`) reads this file and exports:
-
-- `BRIDGEIT_CLIENT_ID`
-- `BRIDGEIT_CLIENT_SEC`
-- `BRIDGEIT_KEY`
-- `BRIDGEIT_USERID`
-- `BRIDGEIT_MODEL`
-
-## Quick Start
-
-1. Capture authenticated session once:
-
-```bash
-python auth_capture.py
+```json
+{
+  "BRIDGEIT_CLIENT_ID": "...",
+  "BRIDGEIT_CLIENT_SEC": "...",
+  "BRIDGEIT_KEY": "...",
+  "BRIDGEIT_USERID": "..."
+}
 ```
 
-2. Run UI with env loading:
+## Capturing Auth Sessions
 
-```bash
-python initapp.py
+Each site that requires login needs a saved browser session (Playwright storage-state JSON). Sessions are defined under `auth_captures` in `config.yaml`.
+
+```yaml
+auth_captures:
+  cxaia:
+    type: manual              # user completes SSO/MFA manually
+    url: "https://cxassistant.cisco.com/"
+    state_file: "state.json"
+    username_selector: "input[name='identifier']"
+    keep_domains: ["cisco.com"]          # strip tracking/analytics cookies
+  sf:
+    type: sso_derived         # loads 'load_from' session, SSO completes automatically
+    url: "https://ciscosales.lightning.force.com"
+    state_file: "sf_state.json"
+    load_from: "state.json"
+    ready_selector: ".slds-global-header"
+    keep_domains: ["salesforce.com", "force.com"]
 ```
 
-Then open the Chainlit URL shown in terminal.
+**Capture types:**
 
-## Chat Commands & Chat Tips
+| type | behaviour |
+|---|---|
+| `manual` | Browser opens, email auto-filled, user completes MFA, press Enter to save |
+| `sso_derived` | Loads `load_from` session, navigates to URL, waits for `ready_selector`, saves automatically |
+
+**`keep_domains`** — after saving the full browser state, the file is filtered to keep only cookies and localStorage for listed domains. This strips analytics/tracking cookies that slow down replay.
+
+```bash
+python auth_capture.py             # capture all sessions
+python auth_capture.py cxaia       # capture primary Cisco SSO session
+python auth_capture.py sf          # capture Salesforce session (requires cxaia first)
+```
+
+Sessions typically need re-capturing every 8–24 hours.
+
+## Running
+
+```bash
+python initapp.py                                          # start the UI
+python recorder.py my_skill                                # record a new skill
+python recorder.py sf_skill --auth sf_state.json           # record using SF session
+python recorder.py my_skill https://example.com            # with explicit start URL
+```
+
+When `--auth` points to a non-default session file it is saved into the skill JSON as `"auth_state"` and used automatically during replay.
+
+## Chat Commands
 
 | Command / phrase | What happens |
 |---|---|
-| *describe what you want* | Agent picks the best matching skill and asks for confirmation before running |
-| `run <skill_name>` | Run a skill by name; prompts for any required inputs |
-| `run <skill_name> <hint>` | Run a skill with an inline hint — parameter values are extracted automatically (e.g. a deal ID, a search term) |
-| `/run <skill_name> [hint]` | Same as above, explicit prefix form |
+| *describe what you want* | Agent picks the best matching skill and asks for confirmation |
+| `run <skill_name>` | Run a skill; prompts for required inputs |
+| `run <skill_name> <hint>` | Run with an inline hint — parameters extracted automatically |
+| `/run <skill_name> [hint]` | Same, explicit prefix form |
 | `add skill` / `learn new skill` | Start recording a new skill |
-| `list skills` / `show skills` | List all saved skills in chat |
+| `list skills` / `show skills` | List all saved skills |
 | `delete <skill_name>` | Delete a skill (asks for confirmation) |
 | `/reset` | Clear chat history |
-| `/context` | Show saved output values from previous skill runs |
+| `/context` | Show saved output values from previous runs |
 | `/clear context` | Reset stored context |
 | `/memory` | Show cached skill results and their age |
-| `/memory clear` | Delete all cached skill results (next startup will re-run skills) |
-| `/audit` | Show the 10 most recent skill executions with status and duration |
+| `/memory clear` | Delete all cached results (next startup re-runs skills) |
+| `/audit` | Show the 10 most recent skill executions |
 | `/audit <skill_name>` | Filter audit log to a specific skill |
-| `/audit <N>` | Show the last N executions (e.g. `/audit 20`) |
-| `/audit <skill_name> <N>` | Filter + limit (e.g. `/audit sfdc_search_opportunity 5`) |
+| `/audit <N>` | Show the last N executions |
 
 **Inline hint examples:**
 
 ```
-run cxaia_did_overview for DID: 73595369
 run cxaia_did_overview 73595369
-/run cxaia_did_overview 73595369
+run sfdc_search_opportunity for DID: 73595369
+/run sfdc_search_opportunity 73595369
 ```
 
-All three resolve `deal_id = 73595369` without prompting the user. A **🔑 Parameters resolved** message is shown before the browser opens so you can verify the extracted value.
+All three resolve the `did` parameter without prompting. A **🔑 Parameters resolved** message is shown before the browser opens.
 
-**Left sidebar**: shows all saved skills — click any to run it.  
-**Right dashboard panel**: shows live outputs from startup and interactive skill runs. Click **Expand ↗** to view wide tables in a centred overlay. Press `Escape` or **Close** to collapse.
+**Left sidebar**: all saved skills — click any to run.
+**Right dashboard panel**: live outputs from startup and interactive skill runs. Click **Expand ↗** for wide tables. Press `Escape` or **Close** to collapse.
 
 ## Skill Step Types
 
-Each step in a skill JSON has an `action` field. Available types:
+Each step in a skill JSON has an `action` field:
 
 | action | description |
 |---|---|
 | `navigate` | Go to a URL |
-| `click` | Click an element by CSS selector |
-| `input` | Fill a field (parameterized — prompts user if `human_in_the_loop: true`) |
-| `input_text` | Fill a field and press Enter (supports `template` with `{param_name}` placeholders) |
-| `manual_input` | Type a **fixed/predefined value** — value never changes; human confirmation optional |
+| `click` | Click an element by CSS selector (light DOM only) |
+| `locator_click` | Click using Playwright's native locator — **pierces shadow DOM**; supports `:has-text()` and `{param}` substitution |
+| `js_click` | Evaluate a JS expression that returns an element and click it; supports `{param}` substitution |
+| `input` | Fill a field (parameterised) |
+| `input_text` | Fill a field and press Enter; supports `template` with `{param_name}` placeholders |
+| `manual_input` | Type a **fixed value** — never substituted |
+| `parameter_input` | Collect a value before the skill runs (or auto-fill from inline hint) |
+| `type_into` | Focus element, type via keyboard API — most compatible with SPAs and LWCs |
 | `wait` | Pause for `seconds` |
-| `wait_for_selector` | Wait until a CSS selector appears in the DOM |
+| `wait_for_selector` | Wait until a CSS selector appears / becomes visible |
 | `wait_for_text` | Wait until a text string appears anywhere on the page |
-| `wait_and_click_last` | Wait for a selector to appear, then click the **last** matching element |
+| `wait_for_url` | Wait until the page URL matches a glob pattern |
+| `wait_and_click_last` | Wait for a selector, then click the **last** matching element |
 
-### `manual_input` step
+### `locator_click`
 
-Use `manual_input` when a step should always enter the same fixed text, with an optional human confirmation before execution.
-
-```json
-{
-  "action": "manual_input",
-  "selector": "input[name='search']",
-  "value": "Cisco Catalyst 9300",
-  "press_enter": true,
-  "human_in_the_loop": true
-}
-```
-
-Fields:
-
-- `selector` *(required)* — CSS selector of the target input element.
-- `value` *(required)* — Fixed text to type. Never substituted with template variables.
-- `press_enter` *(optional, default `false`)* — Press Enter after filling the field.
-- `human_in_the_loop` *(optional, default `true`)* — When `true`, pauses for user approval before executing. The user can confirm, edit the value for this run, skip, or stop.
-
-### `wait_and_click_last` step
-
-Use when multiple elements match the same selector (e.g. several copy buttons rendered by a component) and you want to interact with the last one.
+Use for SF Lightning / LWC components or any site with shadow DOM where `click` fails.
 
 ```json
 {
-  "action": "wait_and_click_last",
-  "selector": "button.copy-btn",
-  "timeout": 10000
+  "action": "locator_click",
+  "label": "Click Details tab",
+  "selector": "a[data-label='Details'][role='tab']",
+  "click_method": "js",
+  "timeout_s": 20
 }
 ```
 
-Fields:
+| field | notes |
+|---|---|
+| `selector` | Playwright CSS. `:has-text('...')` pierces shadow DOM. Supports `{param_name}` substitution. |
+| `click_method` | `"playwright"` (default) — simulated click · `"js"` — `el.click()` via JS eval, bypasses LWC pointer-event interception · `"force"` — Playwright click with `force=True` |
+| `wait_selector` | CSS selector to wait for (attached) before running |
+| `timeout_s` | seconds (default: `action_timeout_ms` from config) |
 
-- `selector` *(required)* — CSS selector.
-- `timeout` *(optional, default `5000`)* — Milliseconds to wait for the element to appear.
+### `js_click`
 
-### Skill auto-params (inline hint extraction)
+Use when full JavaScript logic is needed to find the element (ancestor exclusion, combined checks).
 
-Steps with `param_name` and `human_in_the_loop: false` are **auto-params** — their value is filled automatically from the inline hint the user provides in chat. No popup appears.
+```json
+{
+  "action": "js_click",
+  "label": "Click result excluding tab bar",
+  "wait_selector": "a",
+  "timeout_s": 30,
+  "js": "Array.from(document.querySelectorAll('a')).find(el => el.textContent.includes('{did}') && !el.closest('.slds-context-bar'))"
+}
+```
 
-The extraction order is:
+> **Note**: `js_click` uses `document.querySelectorAll` which **cannot pierce shadow DOM**. Use `locator_click` with `:has-text()` when targeting LWC components.
 
-1. **Explicit key=value** in hint: `deal_id: 73595369`
-2. **Pure number** with single param: `73595369`
-3. **Single long number** (5+ digits) anywhere in hint: `run overview for DID 73595369`
-4. **LLM extraction** for complex or multi-param hints
-5. **Fallback** to the recorded default value
+### `parameter_input`
+
+Value collected before the skill runs, then silently typed during execution.
+
+```json
+{
+  "action": "parameter_input",
+  "selector": "input.search-input",
+  "param_name": "did",
+  "param_description": "DID number to search for",
+  "value": "",
+  "press_enter": true
+}
+```
+
+### `wait_for_url`
+
+```json
+{ "action": "wait_for_url", "pattern": "**/lightning/r/**", "timeout_s": 20 }
+```
+
+### Per-skill auth session
+
+A skill can override the default session file:
+
+```json
+{
+  "name": "My SF Skill",
+  "auth_state": "sf_state.json",
+  "steps": [ ... ]
+}
+```
+
+`replay.py` uses this file instead of `config.yaml auth_state`. The recorder sets it automatically when `--auth` is used.
+
+### Inline hint auto-params
+
+Steps with `param_name` are auto-params — filled from the inline hint without prompting:
+
+1. Explicit `key=value`: `deal_id: 73595369`
+2. Pure number with single param: `73595369`
+3. Single long number (5+ digits): `run overview for DID 73595369`
+4. LLM extraction for complex / multi-param hints
+5. Fallback to recorded default
 
 ## Startup Skills & Dashboard
 
-Skills listed under `startup_skills` in `config.yaml` run automatically at app launch. Their outputs are cached locally and displayed on the **Dashboard panel**.
+Skills in `startup_skills` run at launch. Results cached in `memory/` (TTL = `startup_skill_ttl_hours`).
 
-### Caching (24 h TTL)
+- Cache hit (fresh) → skip re-run, load from file.
+- Cache stale / missing → run headlessly.
+- Skill fails → use most recent stale cache as fallback.
+- After any interactive run → result also cached for LLM access.
 
-- On startup, if a cached result for that skill exists and is **less than `startup_skill_ttl_hours` old**, it is loaded from `memory/` and the skill is **not re-run** (faster startup).
-- If the cache is stale or missing, the skill runs headlessly.
-- If the skill fails at runtime, the most recent stale cache is used as a fallback with an age label.
-- After any **interactive skill run**, the result is also cached so the LLM can reference it later.
+Use `/memory` to inspect ages. Use `/memory clear` to force a fresh run.
 
-Use `/memory` in chat to inspect cache ages. Use `/memory clear` to force a fresh run on next startup.
-
-### Dashboard panel
-
-The right-side panel shows a card for each skill that has produced outputs. Cards auto-update as skills finish.
-
-- **Markdown tables** (e.g. top-10 ATR deal tables) are rendered as proper HTML tables with horizontal scroll.
-- **Key/value outputs** are shown as labelled rows.
-- Click **Expand ↗** to open the card in a full-screen centred overlay — useful for wide tables.
-- Press `Escape` or **Close ✕** to return to normal.
-- Click **↻** in the panel header to force a re-render.
-
-### LLM access to stored results
-
-Every skill output saved in `memory/` is injected into the LLM's system prompt automatically. The LLM can reference stored data in chat (e.g. explain a deal from the ATR table, suggest next actions) without re-running the skill.
-
-## Useful Commands
-
-Run default UI launcher:
-
-```bash
-python initapp.py
-```
-
-Optional: run recorder directly from terminal (env vars are loaded first):
-
-```bash
-python initapp.py -- python recorder.py another_skill
-```
-
-## Adding a new skill
-
-Skills are JSON files in the `skills/` directory. You can create one by recording a browser flow (`python recorder.py <name>`) or by writing the JSON directly.
-
-Every skill should include a `description` field — this is what the LLM reads when deciding which skill to run from a natural-language request. Without it, intent routing won't suggest the skill.
-
-```json
-{
-  "name": "My Skill Display Name",
-  "description": "One sentence: what this skill does and when to use it.",
-  "created": "2026-06-29",
-  "steps": [ ... ],
-  "inputs": [ ... ],
-  "outputs": [ ... ]
-}
-```
-
-For parameterised steps (where the user provides a value), set `"human_in_the_loop": true` and give the step a `"param_name"`. This causes the agent to pause and confirm the value before executing.
-
-After saving the JSON, the skill appears in the left panel immediately — no restart needed.
+Dashboard panel features: markdown tables rendered as HTML, **Expand ↗** overlay for wide tables, **↻** force re-render. Every output in `memory/` is injected into the LLM system prompt automatically.
 
 ## Audit Log
 
-Every interactive skill run is recorded in `audit.db` (SQLite, auto-created on first run). Each row captures:
+Every interactive run is recorded in `audit.db` (SQLite, auto-created):
 
-- skill file name and display name
-- parameters passed in
-- start and end timestamps
-- wall-clock duration in seconds
+- skill name, parameters, timestamps, duration
 - outcome: `success`, `stopped`, or `error`
-- error message if applicable
-- captured outputs
+- error message and captured outputs
 
-Query it from chat with `/audit`, or open `audit.db` directly with any SQLite viewer (e.g. DB Browser for SQLite).
+Query from chat with `/audit`, or open with DB Browser for SQLite.
 
 ## Troubleshooting
 
-- **No skills visible in UI**: record at least one skill with `python recorder.py <name>`, or add a JSON file to `skills/`.
-- **Intent routing picks the wrong skill**: add or improve the `description` field in the skill JSON — more specific descriptions produce better routing.
-- **Login/session not reused**: run `python auth_capture.py` again and verify `auth_state` path in `config.yaml`.
-- **BridgeIT auth errors**: verify values exist in `~/.env/greg_ai_env.json` and are non-empty.
-- **Playwright browser errors**: run `python -m playwright install`.
-- **Dashboard not updating**: open browser console and run `window.dtDebug()` to inspect parsed dashboard state.
-- **Skill uses wrong parameter value**: check the **🔑 Parameters resolved** message shown before the skill runs; use `/memory` to see what is cached.
-- **SFDC selectors not matching**: Salesforce Lightning selectors can vary by org configuration. If a step fails, use the browser DevTools to find the correct CSS selector and update the skill JSON.
+| Problem | Fix |
+|---|---|
+| No skills visible | Record one with `python recorder.py <name>` or add a JSON to `skills/` |
+| Intent routing picks wrong skill | Improve the `description` field in the skill JSON |
+| Login / session not reused | Run `python auth_capture.py` again; check `auth_state` in config |
+| SF skill fails on LWC element | Use `locator_click` with `click_method: "js"` instead of `click` or `js_click` |
+| `js_click` returns no element | Element is in shadow DOM — switch to `locator_click` with `:has-text()` |
+| SF session expired | Run `python auth_capture.py sf`; sessions last 8–24 h |
+| BridgeIT auth errors | Verify values in `~/.env/greg_ai_env.json` |
+| Playwright browser errors | Run `python -m playwright install` |
+| Dashboard not updating | Open browser console, run `window.dtDebug()` |
+| Wrong parameter value | Check **🔑 Parameters resolved** before skill runs; `/memory` shows cached values |

@@ -1,38 +1,52 @@
 {
   "name": "SFDC: Update Renewal Stage",
-  "description": "Open a Salesforce opportunity by name and update its renewal stage field. Use this when you need to change the pipeline stage of a renewal deal.",
-  "created": "2026-06-29",
+  "description": "Open a Salesforce opportunity by DID and update its renewal stage field. Uses a saved SF session (sf_state.json) to skip the login flow.",
+  "created": "2026-06-30",
+  "auth_state": "sf_state.json",
   "steps": [
     {
       "action": "navigate",
-      "url": "https://ciscosales.lightning.force.com/lightning/o/Opportunity/list"
+      "url": "https://ciscosales.lightning.force.com"
     },
     {
       "action": "wait_for_selector",
-      "selector": "input[type='search'], input.search-input, .forceSearchInput input, input[placeholder*='Search']",
-      "timeout_s": 15
+      "selector": ".slds-global-header",
+      "timeout_s": 30
+    },
+    {
+      "action": "click",
+      "selector": "button[aria-label='Search']"
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "input.search-input, input[placeholder='Search...']",
+      "timeout_s": 10,
+      "state": "visible"
     },
     {
       "action": "parameter_input",
-      "selector": "input[type='search'], input.search-input, .forceSearchInput input, input[placeholder*='Search']",
-      "param_name": "opportunity_name",
-      "param_description": "Opportunity or account name to locate in Salesforce",
+      "selector": "input.search-input, input[placeholder='Search...']",
+      "param_name": "did",
+      "param_description": "DID number to locate the opportunity in Salesforce",
       "value": "",
       "press_enter": true
     },
     {
-      "action": "wait_for_selector",
-      "selector": ".forceListViewManagerList a, table.slds-table a, .listViewContent a",
+      "action": "locator_click",
+      "label": "Click search results tab containing DID",
+      "selector": "a:has-text('{did}')",
+      "click_method": "js",
+      "timeout_s": 30
+    },
+    {
+      "action": "locator_click",
+      "label": "Click opportunity record link (outputLookupLink)",
+      "selector": "a[class*='outputLookupLink']",
       "timeout_s": 20
     },
     {
-      "action": "wait_and_click_last",
-      "selector": ".forceListViewManagerList a[data-recordid], table.slds-table tbody tr:first-child a",
-      "settle_seconds": 2
-    },
-    {
       "action": "wait_for_selector",
-      "selector": ".record-detail-body, .flexipagePageContainer",
+      "selector": ".slds-page-header",
       "timeout_s": 20
     },
     {
@@ -41,16 +55,16 @@
     },
     {
       "action": "click",
-      "selector": "button[title='Edit Stage'], a[data-field='StageName'], .slds-form-element__label + .slds-form-element__control button"
+      "selector": "button[title='Edit Stage'], a[title='Edit Stage'], [data-field='StageName'] button, button[name='StageName']"
     },
     {
       "action": "wait_for_selector",
-      "selector": ".select, select[name='StageName'], .slds-combobox__container",
-      "timeout_ms": 10000
+      "selector": ".slds-combobox__container, select[name='StageName'], .slds-listbox--dropdown",
+      "timeout_s": 10
     },
     {
       "action": "parameter_input",
-      "selector": "select[name='StageName'], .slds-combobox__input",
+      "selector": ".slds-combobox__container input, select[name='StageName']",
       "param_name": "renewal_stage",
       "param_description": "New renewal stage value (e.g. 'Closed Won', 'Renewal - In Progress', 'Renewal - At Risk')",
       "value": "Closed Won",
@@ -62,22 +76,22 @@
     },
     {
       "action": "click",
-      "selector": "button[title='Save'], .slds-modal__footer button.slds-button_brand, button.slds-button_brand[type='submit']"
+      "selector": "button[title='Save'], .slds-modal__footer button.slds-button_brand, .record-home-actions button[title='Save']"
     },
     {
       "action": "wait_for_selector",
-      "selector": ".record-detail-body, .toastMessage",
+      "selector": ".toastMessage, .slds-notify__content, .slds-page-header",
       "timeout_s": 15
     },
     {
       "action": "wait",
-      "seconds": 2
+      "seconds": 1
     }
   ],
   "inputs": [
     {
-      "name": "opportunity_name",
-      "label": "Opportunity / Account Name",
+      "name": "did",
+      "label": "DID Number",
       "default": ""
     },
     {
@@ -90,7 +104,7 @@
     {
       "name": "confirmation",
       "type": "selector",
-      "selector": ".toastMessage, .slds-notify__content, .record-detail-body",
+      "selector": ".toastMessage, .slds-notify__content, .slds-page-header__title",
       "label": "Save Confirmation"
     }
   ]

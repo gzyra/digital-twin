@@ -16,7 +16,7 @@
     {
       "action": "manual_input",
       "selector": "textarea",
-      "value": "Show me my ATR and list my top 10 deals by ATR within 6-18 months",
+      "value": "Show me my total forecast by status and top 5 opportunities by close date",
       "press_enter": true,
       "human_in_the_loop": false
     },

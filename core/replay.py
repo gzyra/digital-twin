@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Awaitable, Callable
 
 from playwright.async_api import async_playwright
@@ -48,6 +49,12 @@ def step_label(step: dict) -> str:
     if a == "parameter_input":
         suffix = " + Enter" if step.get("press_enter", False) else ""
         return f"Enter '{step.get('param_name', '')}' into: {step.get('selector')}{suffix}"
+    if a == "wait_for_url":
+        return f"Wait for URL: {step.get('pattern')}"
+    if a == "js_click":
+        return f"JS click: {step.get('label', step.get('js', '')[:60])}"
+    if a == "locator_click":
+        return f"Locator click: {step.get('label', step.get('selector', ''))}"
     return a
 
 
@@ -139,6 +146,70 @@ async def _execute(page, step, params):
             timeout=timeout,
         )
         return
+    elif a == "wait_for_url":
+        # Wait until the page URL matches a glob pattern (e.g. "**/lightning/search**").
+        pattern = step.get("pattern", "**")
+        timeout = _timeout_ms(step, LOAD_TIMEOUT_MS)
+        await page.wait_for_url(pattern, timeout=timeout)
+        return
+    elif a == "js_click":
+        # Evaluate a JS expression that returns an element, then click it.
+        # Use this when CSS alone cannot distinguish the target from similarly
+        # structured elements (e.g. excluding ancestors like .slds-context-bar).
+        #
+        # Optional fields:
+        #   wait_selector  — CSS selector to wait for before evaluating JS
+        #   js             — JS expression returning an HTMLElement; supports
+        #                     {param_name} placeholders substituted from skill params
+        #   timeout_s      — wait timeout (default: ACTION_TIMEOUT_MS)
+        wait_sel = step.get("wait_selector")
+        if wait_sel:
+            timeout = _timeout_ms(step, ACTION_TIMEOUT_MS)
+            await page.wait_for_selector(wait_sel, state="attached", timeout=timeout)
+        js = step["js"]
+        # Substitute {param_name} placeholders the same way input_text templates work.
+        if "{" in js and params:
+            try:
+                js = js.format(**params)
+            except KeyError:
+                pass
+        el_handle = await page.evaluate_handle(js)
+        el = el_handle.as_element()
+        if el is None:
+            raise RuntimeError(f"js_click: expression returned no element.\nJS: {js}")
+        await el.scroll_into_view_if_needed()
+        await el.click()
+        return
+    elif a == "locator_click":
+        # Click using Playwright's native locator engine, which pierces shadow DOM.
+        # Selector supports Playwright extensions like :has-text('...') and {param}
+        # substitution. Use this instead of js_click when elements may be in shadow DOM.
+        selector = step["selector"]
+        if "{" in selector and params:
+            try:
+                selector = selector.format(**params)
+            except KeyError:
+                pass
+        timeout = _timeout_ms(step, ACTION_TIMEOUT_MS)
+        wait_sel = step.get("wait_selector")
+        if wait_sel:
+            await page.wait_for_selector(wait_sel, state="attached", timeout=timeout)
+        locator = page.locator(selector).first
+        await locator.wait_for(state="visible", timeout=timeout)
+        # click_method controls how the click is dispatched:
+        #   "playwright" (default) — simulated mouse click (coordinate-based)
+        #   "js"                   — el.click() via JS eval (bypasses SF Lightning
+        #                            shadow-DOM pointer-event interception)
+        #   "force"                — Playwright click with force=True (skips
+        #                            actionability checks like coverage)
+        click_method = step.get("click_method", "playwright")
+        if click_method == "js":
+            await locator.evaluate("el => el.click()")
+        elif click_method == "force":
+            await locator.click(force=True)
+        else:
+            await locator.click()
+        return
     elif a == "wait_and_click_last":
         # Wait for elements matching the selector, then click the last one.
         selector = step["selector"]
@@ -220,7 +291,14 @@ async def run_skill(
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False, channel="chrome")
-        ctx = await browser.new_context(storage_state=_CFG["auth_state"])
+        # Use per-skill auth_state if declared (e.g. sf_state.json), else global default.
+        skill_auth = skill.get("auth_state")
+        auth_state_path = (
+            str(skill_auth)
+            if skill_auth and Path(str(skill_auth)).exists()
+            else _CFG["auth_state"]
+        )
+        ctx = await browser.new_context(storage_state=auth_state_path)
         page = await ctx.new_page()
         page.set_default_timeout(ACTION_TIMEOUT_MS)
         page.set_default_navigation_timeout(LOAD_TIMEOUT_MS)
