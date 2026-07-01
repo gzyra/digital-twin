@@ -1,0 +1,73 @@
+{
+  "name": "CX AIA: Top Deals Without Deal Pulse",
+  "description": "Identify top renewal deals per specialist that lack a deal pulse. Analyze adoption risk, TAC engagement, and customer sentiment. Filter by business entity, fiscal period, region, theater, and opportunity owner.",
+  "requires": ["business_entity", "fiscal_period", "sales_theater"],
+  "provides": ["renewal_opportunities_table", "red_deals_action_plan_table", "business_entity", "fiscal_period", "sales_theater", "total_deals_identified"],
+  "goal_tags": ["deal pulse", "renewal specialist", "red deals", "risk analysis", "adoption risk", "TAC engagement", "renewal opportunities", "churn risk", "deal-less"],
+  "system": "cxaia",
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "https://cxassistant.cisco.com/"
+    },
+    {
+      "action": "click",
+      "selector": "textarea, [role='textbox'], input[type='text']"
+    },
+    {
+      "action": "parameter_input",
+      "selector": "textarea",
+      "param_name": "business_entity",
+      "label": "Business Entity",
+      "description": "e.g., Enterprise Switching, Data Center Networking, Wireless",
+      "human_in_the_loop": true
+    },
+    {
+      "action": "parameter_input",
+      "selector": "textarea",
+      "param_name": "fiscal_period",
+      "label": "Fiscal Period",
+      "description": "e.g., FY26 Q3, FY27 Q1, FY26 H2",
+      "human_in_the_loop": true
+    },
+    {
+      "action": "parameter_input",
+      "selector": "textarea",
+      "param_name": "sales_theater",
+      "label": "Sales Theater",
+      "description": "e.g., US COMMERCIAL, US Public Sector, EMEA North",
+      "human_in_the_loop": true
+    },
+    {
+      "action": "input_text",
+      "selector": "textarea",
+      "template": "\n\nBusiness Entity: {business_entity}\n\nFiscal Period: {fiscal_period}\n\nSales Theater: {sales_theater}\n\n---\n\nGenerate the list of the Top opportunities in a tabular format, with the following columns in this exact order:\n\n| Deal ID (with Salesforce hyperlink) | CAV BU ID | Renewal Specialist | Customer Name | Expected ATR | Total ATR | ATR Gap | Architecture | Identified Risk |\n\nFixed Parameters:\nOPPTY_DEAL_PULSE is empty\n\n1. Data Processing & Filtering Rules:\n• Filters:\n- Architecture: 'Based on Business Entity provided'\n- TERRITORY: 'Sales Theater provided'\n- FISCAL_YEAR: 'Fiscal Period provided'\n- FISCAL_QUARTER: 'Fiscal Period provided'\n- Total ATR (from OPPTY_TOTAL_ATR)\n- OPPTY_DEAL_PULSE: Empty (this is the key filter - deals WITHOUT a pulse)\n- Renewal Opp SAV: Not empty\n- Expected ATR (from OPPTY_EXPECTED_TOTAL_ATR)\n- Filter by Expected Total ATR greater than $50,000 (Required – deal-level value only)\n- Must reflect opportunity-level Expected Total ATR\n- Avoid duplication from line level data\n• Sorting: Sort by 'Total ATR' in descending order.\n• For each Deal ID, display Expected ATR (from OPPTY_EXPECTED_TOTAL_ATR) and Total ATR (from OPPTY_TOTAL_ATR).\n• Batching:\n- Display ONLY the first 25 rows in the initial response. After displaying, ALWAYS ask: \"Would you like to retrieve the next 25 rows?\"\n- Wait for the reply before displaying more. Repeat in increments of 25 rows until all 100 are shown.\n- Strictly follow all the format, tables and rules of the original request.\n\n2. Table 1: Renewal Opportunities\n• Columns (Exact Order): | Deal ID | CAV BU ID | Renewal Specialist | Customer Name | Expected ATR | Total ATR | ATR Gap | Architecture | Identified Risk |\n• ATR Gap Logic:\n- If Expected ATR is empty or 0, mark ATR Gap as 🟡\n- If Expected ATR >= Total ATR (no change or increase), mark ATR Gap as 🟢\n- If Expected ATR < Total ATR (decrease), mark ATR Gap as 🔴\n• Identified Risk Logic (Mandatory Format - THREE bullet points per cell):\n- Use three bullet points per cell, each starting with the risk type in bold.\n  • **Adoption/Product Usage Risk:** [Specific risk analysis based on segment/industry context]\n  • **TAC Engagement:** [Specific TAC engagement level and context]\n  • **Commercial/Business/Sentiment Risk:** [Specific business/sentiment risk]\n- Constraints: No generic phrases (e.g., \"no data available\"). If context is missing, infer specific risks based on industry/segment. Every row must be unique.\n- On-Prem Rule: If the opportunity is for an on-prem deployment, you MUST append and bold: **Deployment Type: On-prem deployment.**\n\n3. Table 2: Red Deals Only – Action Plan Included\n• Criteria: Include only rows where ATR Gap is 🔴.\n• Columns: | Deal ID | Customer Name | ATR Gap | 3-Step Action Plan |\n• Action Plan Logic:\n- Provide a 3-step numbered list. Each step must be one sentence, numbered, and separated by line breaks.\n- Focus on practical, unique next steps based on the risks identified in Table 1.\n- Example format for action plan:\n  1. Immediate risk assessment: [specific step]\n  2. Stakeholder engagement: [specific step]\n  3. Follow-up timeline: [specific step]\n\n4. Formatting & Constants:\n• Output Format: Markdown tables only. No introductory or closing text.\n• Strict Adherence: Never change column headers. Never leave a risk cell blank.",
+      "press_enter": true
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "table, [role='grid'], [role='table']",
+      "timeout_ms": 120000
+    },
+    {
+      "action": "wait_and_click_last",
+      "selector": "button:has-text('Export'), button:has-text('Copy'), button:has-text('Download'), [data-testid='export-button']"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "deals_without_pulse_results",
+      "type": "clipboard",
+      "parse": true,
+      "fields": [
+        {"name": "renewal_opportunities_table"},
+        {"name": "red_deals_action_plan_table"},
+        {"name": "business_entity"},
+        {"name": "fiscal_period"},
+        {"name": "sales_theater"},
+        {"name": "total_deals_identified"},
+        {"name": "red_deals_count"}
+      ]
+    }
+  ]
+}

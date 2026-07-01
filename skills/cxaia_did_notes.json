@@ -79,5 +79,9 @@
       ]
     }
   ],
-  "description": "Retrieve the Deal Pulse notes and insights for a specific DID from CX AIA. Use this to check recorded risks, flags and recommendations for a deal."
+  "description": "Retrieve the Deal Pulse notes and insights for a specific DID from CX AIA. Use this to check recorded risks, flags and recommendations for a deal.",
+  "requires": ["deal_id"],
+  "provides": ["deal_id", "customer_name", "deal_stage", "deal_value", "close_date", "owner", "product_family", "summary"],
+  "goal_tags": ["deal pulse", "ai insights", "case notes", "risks", "flags", "recommendations", "deal summary", "pulse notes", "adoption risk"],
+  "system": "cxaia"
 }

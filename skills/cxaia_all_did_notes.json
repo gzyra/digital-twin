@@ -6,5 +6,9 @@
   "source_skill": "cxaia_top_10_dids",
   "source_output": "atr_table",
   "target_skill": "cxaia_did_notes",
-  "target_param": "deal_id"
+  "target_param": "deal_id",
+  "requires": [],
+  "provides": ["did_notes_summary"],
+  "goal_tags": ["all deal notes", "bulk notes", "notes for all deals", "batch notes"],
+  "system": "cxaia"
 }

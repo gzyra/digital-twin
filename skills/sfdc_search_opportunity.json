@@ -32,6 +32,10 @@
       "press_enter": true
     },
     {
+      "action": "wait",
+      "seconds": 10
+    },
+    {
       "action": "locator_click",
       "label": "Click search results tab containing DID",
       "selector": "a:has-text('{did}')",
@@ -98,5 +102,10 @@
         {"name": "expected_services_attrition",     "description": "Expected Services Attrition ($000s)"}
       ]
     }
-  ]
+  ],
+  "description": "Search for an opportunity in Salesforce by DID number. Uses a saved SF session (state_sf.json) to skip the login flow entirely — no SSO redirect, no 35-second wait.",
+  "requires": ["did"],
+  "provides": ["account_name", "deal_id", "forecasting_position", "opportunity_owner", "opportunity_name", "stage", "forecast_status", "opportunity_notes", "close_date", "prior_contract_expiration_date"],
+  "goal_tags": ["search salesforce", "find opportunity", "browse deals", "salesforce search", "opportunity lookup by name or account", "opportunity notes", "oppty notes", "deal notes from salesforce"],
+  "system": "salesforce"
 }

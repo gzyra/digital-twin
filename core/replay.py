@@ -88,12 +88,11 @@ async def _execute(page, step, params):
                 value = params.get(step.get("param_name"), step.get("value", ""))
         else:
             value = params.get(step.get("param_name"), step.get("value", ""))
-        # Click to focus, then type via keyboard to fire real keystroke events.
-        # page.keyboard.type() targets the focused element, which avoids selector
-        # mismatches caused by SFDC Lightning shadow-DOM layering.
+        # Click to focus, then fill the field (much faster than keyboard.type for large strings)
         await page.click(step["selector"], timeout=ACTION_TIMEOUT_MS)
-        await page.keyboard.type(value)
-        await page.keyboard.press('Enter')
+        await page.fill(step["selector"], value, timeout=ACTION_TIMEOUT_MS)
+        if step.get("press_enter", True):
+            await page.keyboard.press('Enter')
         return
     elif a == "manual_input":
         # Fixed value typed into a field — always uses the hardcoded step value.
@@ -279,9 +278,15 @@ async def run_skill(
     skill: dict,
     params: dict,
     ask_user: Callable[[dict], Awaitable[dict]],
+    *,
+    headless: bool | None = None,
 ) -> dict:
     """Replay a skill, pausing only on parameterized steps.
-    
+
+    ``headless`` overrides the config value when supplied.
+    Pass ``headless=True`` for startup / background runs so no visible Chrome
+    window is opened; omit it (or pass ``None``) to use the config default.
+
     Returns a dict with:
       - 'outputs': {name: value} for each declared skill output
       - 'page_text': raw visible text of the final page for LLM extraction
@@ -289,8 +294,9 @@ async def run_skill(
     """
     result = {"outputs": {}, "page_text": "", "page_url": ""}
 
+    _headless = bool(_CFG.get("headless", False)) if headless is None else headless
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False, channel="chrome")
+        browser = await p.chromium.launch(headless=_headless, channel="chrome")
         # Use per-skill auth_state if declared (e.g. sf_state.json), else global default.
         skill_auth = skill.get("auth_state")
         auth_state_path = (

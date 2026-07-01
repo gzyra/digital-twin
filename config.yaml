@@ -67,10 +67,69 @@ record_urls: []
 # Run automatically on app start (headless). Results shown in the dashboard panel.
 startup_skills:
   - cxaia_top_10_dids
-  - cxaia_top_5_dids_by_close_date
 
 memory_dir: "memory"
 startup_skill_ttl_hours: 24
+
+# ── CX AIA Parameters ─────────────────────────────────────────────────────────
+# Picklists used by parameterized CX AIA skills (e.g. cxaia_atr_by_sales_level)
+# Users can select from these hardcoded options or type custom values.
+cxaia:
+  sales_levels:
+    - "Americas"
+    - "EMEA"
+    - "Japan"
+    - "APJ"
+  time_frames:
+    - "FY26"
+    - "FY26 Q1"
+    - "FY26 Q2"
+    - "FY26 Q3"
+    - "FY26 Q4"
+    - "FY27"
+    - "FY27 H1"
+    - "FY27 H2"
+  business_entities:
+    - "Collaboration"
+    - "Security"
+    - "Networking"
+    - "Observability"
+    - "Enterprise Switching"
+    - "Enterprise Routing"
+    - "Data Center Networking"
+    - "Wireless"
+    - "All Business Entities"
+  fiscal_periods:
+    - "FY26 Q1"
+    - "FY26 Q2"
+    - "FY26 Q3"
+    - "FY26 Q4"
+    - "FY26 H1"
+    - "FY26 H2"
+    - "FY27 Q1"
+    - "FY27 Q2"
+    - "FY27 Q3"
+    - "FY27 Q4"
+    - "FY27 H1"
+    - "FY27 H2"
+  sales_regions:
+    - "Americas"
+    - "EMEA"
+    - "APJC"
+    - "All"
+  sales_theaters:
+    - "US COMMERCIAL"
+    - "US Public Sector"
+    - "US Government"
+    - "Canada"
+    - "Latin America"
+    - "EMEA North"
+    - "EMEA South"
+    - "EMEA MEA"
+    - "Japan"
+    - "APJ East"
+    - "APJ South"
+    - "All Theaters"
 
 # ── Dashboard KPIs (center hero strip) ────────────────────────────────────
 # Big-number cards shown across the top of the chat area. Each KPI pulls from a

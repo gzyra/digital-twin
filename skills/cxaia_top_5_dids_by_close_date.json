@@ -42,5 +42,9 @@
       "label": "Top 10 ATR Deals"
     }
   ],
-  "description": "Fetch the top 10 deals by ATR (Amount to Renew) from CX AIA. Returns a table of deal IDs, account names, and renewal values. Run this first to get your deal list."
+  "description": "Fetch the top 5 deals sorted by close date from CX AIA. Returns a table of deal IDs, account names, close dates, and forecast status.",
+  "requires": [],
+  "provides": ["atr_table", "deal_id"],
+  "goal_tags": ["top deals by close date", "upcoming renewals", "forecast by status", "close date"],
+  "system": "cxaia"
 }

@@ -79,6 +79,7 @@ def load_runtime_env(env_json_path: Path) -> None:
             os.environ[env_name] = env_value
 
     os.environ.setdefault("DIGITAL_TWIN_CONFIG", str(PROJECT_DIR / "config.yaml"))
+    os.environ.setdefault("CHAINLIT_LANGUAGE", "en-US")
 
 
 def build_command(argv: list[str]) -> list[str]:

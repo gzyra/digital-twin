@@ -42,3 +42,38 @@ def reload_config() -> dict:
     global _CACHE
     _CACHE = None
     return get_config()
+
+
+def get_enum_for_parameter(param_name: str) -> list[str] | None:
+    """Get enum/picklist options for a parameter from config if defined.
+    
+    Maps parameter names to config.yaml picklists. Returns None if no enum defined.
+    
+    Args:
+        param_name: Parameter name (e.g., "sales_level", "business_entity")
+    
+    Returns:
+        List of strings (picklist options) or None if not found.
+    
+    Example:
+        get_enum_for_parameter("sales_level")      # → ["Americas", "EMEA", ...]
+        get_enum_for_parameter("business_entity")  # → ["Collaboration", ...]
+        get_enum_for_parameter("unknown")          # → None
+    """
+    config = get_config()
+    
+    # Map parameter names to config.yaml paths: (section, key)
+    enum_mappings = {
+        "sales_level": ("cxaia", "sales_levels"),
+        "time_frame": ("cxaia", "time_frames"),
+        "business_entity": ("cxaia", "business_entities"),
+        "fiscal_period": ("cxaia", "fiscal_periods"),
+        "sales_region": ("cxaia", "sales_regions"),
+        "sales_theater": ("cxaia", "sales_theaters"),
+    }
+    
+    if param_name not in enum_mappings:
+        return None
+    
+    section, key = enum_mappings[param_name]
+    return config.get(section, {}).get(key)

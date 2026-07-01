@@ -1,0 +1,96 @@
+{
+  "name": "CX AIA: ATR by Sales Level",
+  "description": "Retrieve Total ATR and top 10 opportunities for a specific Sales Level, Time Frame, and optional Business Entity from CX AIA.",
+  "requires": ["sales_level", "time_frame"],
+  "provides": ["total_atr", "sales_level", "time_period", "business_entity", "opportunities_table"],
+  "goal_tags": ["ATR", "available to renew", "sales level", "renewal pipeline", "deal list"],
+  "system": "cxaia",
+  "created": "2026-07-01",
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "https://cxassistant.cisco.com/"
+    },
+    {
+      "action": "click",
+      "selector": "textarea",
+      "value": null,
+      "text": "",
+      "url": "https://cxassistant.cisco.com/threads"
+    },
+    {
+      "action": "parameter_input",
+      "selector": "textarea",
+      "param_name": "sales_level",
+      "param_description": "Sales Level (Americas, EMEA, Japan, APJ)",
+      "value": "",
+      "press_enter": false
+    },
+    {
+      "action": "parameter_input",
+      "selector": "textarea",
+      "param_name": "time_frame",
+      "param_description": "Time Frame (e.g. FY26, FY26 Q3, FY27 H1)",
+      "value": "",
+      "press_enter": false
+    },
+    {
+      "action": "parameter_input",
+      "selector": "textarea",
+      "param_name": "business_entity",
+      "param_description": "Business Entity (Collaboration, Security, Networking, etc.) - leave blank for All",
+      "value": "",
+      "press_enter": false
+    },
+    {
+      "action": "input_text",
+      "selector": "textarea",
+      "template": "\n\nSales Level: {sales_level}\n\nTime Frame: {time_frame}\n\nBusiness Entity: {business_entity}\n\n---\n\nYou are a Cisco CX Business Insights Assistant. I want you to show me the complete ATR (in $) value for the specified Sales Level, the specified Time Frame, and the specified Business Entity. Along with that generate a list of Top 10 unique deal IDs (as per ATR $) for the same criteria.\n\nIf Business Entity is blank, consider all Business Entities.\n\nOUTPUT:\nSales Level: [Resolved]\nTime Period: [Expanded Fiscal Period]\nTotal ATR Value: $X,XXX,XXX\n\nTop 10 opportunities\n| Rank | Customer | Deal ID | Architecture | Stage Name | Contract Expiration Date | Expected Total ATR ($) |",
+      "press_enter": true
+    },
+    {
+      "action": "wait_for_selector",
+      "selector": "pol-ai-chat-message-actions button:nth-child(3)",
+      "state": "visible",
+      "timeout_s": 120
+    },
+    {
+      "action": "wait_and_click_last",
+      "selector": "pol-ai-chat-message-actions button:nth-child(3)",
+      "scroll_into_view": true,
+      "scroll_block": "center",
+      "settle_seconds": 2,
+      "target": "last"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "atr_results",
+      "type": "clipboard",
+      "label": "ATR Results",
+      "parse": true,
+      "fields": [
+        {
+          "name": "total_atr",
+          "description": "Total ATR value in dollars"
+        },
+        {
+          "name": "sales_level",
+          "description": "Sales Level queried"
+        },
+        {
+          "name": "time_period",
+          "description": "Time Period / Fiscal Period queried"
+        },
+        {
+          "name": "business_entity",
+          "description": "Business Entity filtered by (or All if not specified)"
+        },
+        {
+          "name": "opportunities_table",
+          "description": "Markdown table of top 10 opportunities with Deal ID, Customer, Stage, ATR"
+        }
+      ]
+    }
+  ]
+}

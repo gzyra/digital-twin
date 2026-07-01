@@ -87,5 +87,9 @@
       ]
     }
   ],
-  "description": "Get a full overview of a specific deal (DID) in CX AIA \u2014 adoption score, commercial risk, technical risk, and key signals. Requires a deal ID."
+  "description": "Get a full overview of a specific deal (DID) in CX AIA — adoption score, commercial risk, technical risk, and key signals. Requires a deal ID.",
+  "requires": ["deal_id"],
+  "provides": ["deal_id", "customer_name", "cav_bu_id", "opportunity_url", "deal_stage", "deal_value", "close_date", "owner", "product_family", "summary"],
+  "goal_tags": ["deal overview", "adoption score", "commercial risk", "technical risk", "cav bu id", "deal details"],
+  "system": "cxaia"
 }

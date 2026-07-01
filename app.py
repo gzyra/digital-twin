@@ -14,6 +14,7 @@ import chainlit as cl
 import yaml
 
 from core.audit import format_audit_summary, log_end, log_start, recent_runs
+from core.config import get_config, get_enum_for_parameter
 from core.llm import chat_completion, plan_goal, select_skill_by_intent, stream_chat_completion
 from core.memory import age_description, all_outputs_for_llm, is_stale, list_results, load_result, save_result
 from core.replay import run_skill
@@ -22,6 +23,9 @@ from recorder import record_skill
 
 
 RUN_VERBS = {"run", "execute", "start", "launch", "open", "play"}
+
+# ── Configure Chainlit to use English by default, disable language detection warning ──
+os.environ.setdefault("CHAINLIT_LANGUAGE", "en-US")
 
 
 # ---------- dashboard helpers ----------
@@ -147,6 +151,12 @@ async def emit_kpis() -> None:
     from datetime import datetime, timezone as _tz
     data = json.dumps({"kpis": kpis, "ts": datetime.now(_tz.utc).isoformat()})
     await cl.Message(content=f"```kpi-data\n{data}\n```").send()
+
+
+async def emit_skills_update(skills: list[str]) -> None:
+    """Emit a skills-data block the JS sidebar parses — avoids fragile chat-text scraping."""
+    data = json.dumps({"skills": sorted(skills)})
+    await cl.Message(content=f"```skills-data\n{data}\n```").send()
 
 
 def _is_markdown_table(value: str) -> bool:
@@ -376,7 +386,8 @@ async def run_startup_skills() -> None:
                     if pname and step.get("value"):
                         params[pname] = step["value"]
 
-                result = await run_skill(skill, params, _headless_ask_user)
+                _headless = get_config().get('headless', False)
+                result = await run_skill(skill, params, _headless_ask_user, headless=_headless)
                 all_outputs = await process_skill_outputs(skill_name, skill, result, stream=False)
 
                 if all_outputs:
@@ -677,7 +688,6 @@ async def show_home(skills: list[str]) -> None:
             "- `run <skill_name>` to execute a skill (will ask for inputs)\n"
             "- `/goal <objective>` — describe a goal; the agent plans & chains skills to achieve it\n"
             "- `/skill_name [hint]` — shortcut to run any skill directly (e.g. `/cxaia_did_overview 73595369`)\n"
-            "- `delete <skill_name>` to remove a skill\n"
             "- `stop recording` to finish an active recording\n"
             "- `/context` to see saved output values from previous skill runs\n"
             "- `/clear context` to reset stored context\n"
@@ -727,7 +737,7 @@ async def show_execute(skills: list[str]) -> None:
         content=(
             "### Execute Saved Skill\n"
             f"Saved skills: {', '.join(sorted(skills))}\n\n"
-            "Use chat: `run <skill_name>`, `list skills`, `add skill`, `delete <name>`."
+            "Use chat: `run <skill_name>`, `list skills`, `add skill`."
         ),
     ).send()
 
@@ -863,7 +873,8 @@ async def run_batch_skill(batch_skill: dict) -> None:
     for i, did in enumerate(dids, 1):
         await cl.Message(content=f"📋 Notes {i}/{len(dids)}: DID `{did}`…").send()
         try:
-            result = await run_skill(target_skill, {target_param: did}, _headless_ask_user)
+            _headless = get_config().get('headless', False)
+            result = await run_skill(target_skill, {target_param: did}, _headless_ask_user, headless=_headless)
             outputs = await process_skill_outputs(target_skill_name, target_skill, result, stream=False)
             if outputs:
                 save_result(f"{target_skill_name}_{did}", outputs)
@@ -1005,16 +1016,39 @@ async def execute_plan(goal: str, plan: list[dict]) -> None:
                 ask_needed.append(pname)
     for pname in ask_needed:
         prefill = context.get(pname, "")
-        hint_note = f" _(suggested: `{prefill}`)_" if prefill else ""
-        cl.user_session.set("awaiting_manual_input", True)
-        try:
-            res = await cl.AskUserMessage(
-                content=f"Value for **{pname}**{hint_note}:", timeout=300
-            ).send()
-        finally:
-            cl.user_session.set("awaiting_manual_input", False)
-        raw = (res.get("output", "").strip() if res else "")
-        ask_values[pname] = raw or prefill
+        enum_options = get_enum_for_parameter(pname)
+        
+        if enum_options:
+            # Show dropdown with picklist options
+            actions = [
+                cl.Action(name=opt, value=opt, label=opt, payload={"v": opt})
+                for opt in enum_options
+            ]
+            if prefill and prefill not in enum_options:
+                # Add prefilled value if it's not in the standard list
+                actions.insert(0, cl.Action(name=prefill, value=prefill, label=f"✓ {prefill}", payload={"v": prefill}))
+            cl.user_session.set("awaiting_manual_input", True)
+            try:
+                res = await cl.AskActionMessage(
+                    content=f"Select **{pname}** (or custom value):",
+                    actions=actions,
+                    timeout=300,
+                ).send()
+            finally:
+                cl.user_session.set("awaiting_manual_input", False)
+            ask_values[pname] = res.get("payload", {}).get("v", prefill) if res else prefill
+        else:
+            # Free-form text input (no picklist)
+            hint_note = f" _(suggested: `{prefill}`)_" if prefill else ""
+            cl.user_session.set("awaiting_manual_input", True)
+            try:
+                res = await cl.AskUserMessage(
+                    content=f"Value for **{pname}**{hint_note}:", timeout=300
+                ).send()
+            finally:
+                cl.user_session.set("awaiting_manual_input", False)
+            raw = (res.get("output", "").strip() if res else "")
+            ask_values[pname] = raw or prefill
 
     plan_outputs: dict[str, dict] = {}
     cl.user_session.set("skill_running", True)
@@ -1077,22 +1111,67 @@ async def execute_plan(goal: str, plan: list[dict]) -> None:
                     await cl.Message(content=f"  ↳ {j}/{len(iterations)}: {params or 'no inputs'}").send()
                 _run_id = log_start(skill_name, display_name=skill.get("name", skill_name), params=params)
                 _status, _err = "error", None
-                try:
-                    result = await run_skill(skill, params, _headless_ask_user)
-                    _status = "stopped" if result.get("stopped") else "success"
-                    outputs = await process_skill_outputs(skill_name, skill, result, stream=False)
+                
+                # Build parameterized cache key (e.g., "cxaia_did_overview_69286693")
+                # This ensures different parameters get different cache entries
+                cache_key = skill_name
+                if params:
+                    param_values = "_".join(str(v).replace(" ", "_")[:20] for v in params.values())  # Limit each param to 20 chars
+                    cache_key = f"{skill_name}_{param_values}"
+                
+                # Check cache first: if results exist and not stale, use them
+                cached_data = load_result(cache_key)
+                # Only fall back to plain skill name if there are NO parameters (backwards compatibility)
+                if not cached_data and not params:
+                    cached_data = load_result(skill_name)
+                    if cached_data:
+                        cache_key = skill_name
+                
+                if cached_data and not is_stale(cache_key):
+                    outputs = cached_data.get("outputs", {})
                     last_outputs = outputs or last_outputs
+                    cache_age = age_description(cache_key)
+                    
                     if outputs:
-                        # Key per-item results so later steps can reference them
-                        mem_key = f"{skill_name}_{list(params.values())[0]}" if len(iterations) > 1 and params else skill_name
-                        save_result(mem_key, outputs)
-                        save_result(skill_name, outputs)
+                        save_result(cache_key, outputs)  # Touch the cache (use parameterized key)
                         context.update(outputs)
-                except Exception as exc:
-                    _err = str(exc)
-                    await cl.Message(content=f"  ⚠️ Run failed: {exc}").send()
-                finally:
-                    log_end(_run_id, status=_status, outputs=last_outputs, error=_err)
+                        
+                        # Display cached results in chat
+                        display_lines = "\n".join(
+                            f"- **{k}**: {_display_value(v)}" for k, v in outputs.items()
+                        )
+                        await cl.Message(
+                            content=f"📦 **Results from cache** _(from {cache_age})_:\n{display_lines}"
+                        ).send()
+                    _status = "cached"
+                    log_end(_run_id, status=_status, outputs=outputs, error=_err)
+                else:
+                    try:
+                        _headless = get_config().get('headless', False)
+                        result = await run_skill(skill, params, _headless_ask_user, headless=_headless)
+                        _status = "stopped" if result.get("stopped") else "success"
+                        outputs = await process_skill_outputs(skill_name, skill, result, stream=False)
+                        last_outputs = outputs or last_outputs
+                        if outputs:
+                            # Save with parameterized cache key for precise result matching
+                            save_result(cache_key, outputs)
+                            # Also save with plain skill name for backwards compatibility
+                            if cache_key != skill_name:
+                                save_result(skill_name, outputs)
+                            context.update(outputs)
+                            
+                            # Display outputs to user in chat
+                            display_lines = "\n".join(
+                                f"- **{k}**: {_display_value(v)}" for k, v in outputs.items()
+                            )
+                            await cl.Message(
+                                content=f"📤 **Results from `{skill_name}`:**\n{display_lines}"
+                            ).send()
+                    except Exception as exc:
+                        _err = str(exc)
+                        await cl.Message(content=f"  ⚠️ Run failed: {exc}").send()
+                    finally:
+                        log_end(_run_id, status=_status, outputs=last_outputs, error=_err)
 
             plan_outputs[skill_name] = last_outputs
             await emit_dashboard_update(
@@ -1144,19 +1223,38 @@ async def run_selected_skill(skill_name: str, inline_hint: str = "") -> None:
                 continue
             label = inp.get("label", name.replace("_", " ").title())
             prefill = context.get(name, inp.get("default", ""))
-            hint_note = f" _(suggested: `{prefill}`)_" if prefill else ""
+            enum_options = get_enum_for_parameter(name)
+            
             cl.user_session.set("awaiting_manual_input", True)
             try:
-                res = await cl.AskUserMessage(
-                    content=f"**{label}**{hint_note}\nEnter value (or press Send to use suggested):",
-                    timeout=300,
-                ).send()
+                if enum_options:
+                    # Show dropdown with picklist options
+                    actions = [
+                        cl.Action(name=opt, value=opt, label=opt, payload={"v": opt})
+                        for opt in enum_options
+                    ]
+                    if prefill and prefill not in enum_options:
+                        # Add prefilled value if it's not in the standard list
+                        actions.insert(0, cl.Action(name=prefill, value=prefill, label=f"✓ {prefill}", payload={"v": prefill}))
+                    res = await cl.AskActionMessage(
+                        content=f"**{label}**\nSelect an option:",
+                        actions=actions,
+                        timeout=300,
+                    ).send()
+                    raw = res.get("payload", {}).get("v", prefill) if res else prefill
+                else:
+                    # Free-form text input (no picklist)
+                    hint_note = f" _(suggested: `{prefill}`)_" if prefill else ""
+                    res = await cl.AskUserMessage(
+                        content=f"**{label}**{hint_note}\nEnter value (or press Send to use suggested):",
+                        timeout=300,
+                    ).send()
+                    if not res:
+                        await cl.Message(content="Skill cancelled — no input provided.").send()
+                        return
+                    raw = res.get("output", "").strip()
             finally:
                 cl.user_session.set("awaiting_manual_input", False)
-            if not res:
-                await cl.Message(content="Skill cancelled — no input provided.").send()
-                return
-            raw = res.get("output", "").strip()
             params[name] = raw if raw else prefill
     else:
         # No declared human-in-the-loop inputs.
@@ -1270,8 +1368,7 @@ async def run_recording_job(skill_name: str, start_url: str, stop_event: threadi
                 await cl.Message(content=f"📤 Declared outputs: {out_names}").send()
 
         if skills:
-            skill_list = ", ".join(sorted(skills))
-            await cl.Message(content=f"Saved skills: {skill_list}").send()
+            await emit_skills_update(skills)
 
         await show_execute(skills)
     except Exception as exc:
@@ -1332,10 +1429,8 @@ async def start():
     cl.user_session.set("current_skills", skills)
     cl.user_session.set("skill_context", {})
 
-    # Show initial skills list for sidebar to parse
-    if skills:
-        skill_list = ", ".join(sorted(skills))
-        await cl.Message(content=f"Saved skills: {skill_list}").send()
+    # Emit structured skills block so sidebar parses it reliably
+    await emit_skills_update(skills)
 
     await show_home(skills)
 
@@ -1572,25 +1667,7 @@ async def on_message(message: cl.Message):
         await execute_plan(goal_text, plan)
         return
 
-    # Check if user is confirming delete (do this FIRST, before any other checks)
-    awaiting_delete = cl.user_session.get("awaiting_delete_confirmation")
-    target_skill = cl.user_session.get("delete_target_skill")
-    if awaiting_delete and target_skill:
-        if content.lower() in {"yes", "y", "confirm", "ok", "true"}:
-            try:
-                delete_skill(target_skill)
-                skills = list_skills()
-                cl.user_session.set("skills", skills)
-                reset_chat_history(skills)
-                await cl.Message(content=f"✅ Skill `{target_skill}` has been deleted.").send()
-            except Exception as exc:
-                await cl.Message(content=f"❌ Failed to delete: {exc}").send()
-        else:
-            await cl.Message(content="Deletion cancelled.").send()
-        
-        cl.user_session.set("awaiting_delete_confirmation", False)
-        cl.user_session.set("delete_target_skill", None)
-        return
+
 
     # Check for list skills request
     if is_list_skills_request(content):
@@ -1606,25 +1683,7 @@ async def on_message(message: cl.Message):
         await on_start_learning(cl.Action(name="start_learning", payload={"mode": "learn"}, label="Learn"))
         return
 
-    # Check for delete skill request
-    if is_delete_skill_request(content):
-        # First time delete request - try to extract skill name
-        target = extract_delete_target(content, skills)
-        if not target:
-            if skills:
-                skill_list = ", ".join(sorted(skills))
-                await cl.Message(content=f"Which skill to delete? Available: {skill_list}\n\nSay: \"delete <skill_name>\"").send()
-            else:
-                await cl.Message(content="No skills to delete.").send()
-            return
-        
-        # Ask for confirmation
-        cl.user_session.set("awaiting_delete_confirmation", True)
-        cl.user_session.set("delete_target_skill", target)
-        await cl.Message(
-            content=f"⚠️ Are you sure you want to permanently delete the skill `{target}`? Reply with **yes** or **no** to confirm."
-        ).send()
-        return
+
 
     # Try to match run request — fuzzy name match first
     run_match = extract_skill_request(content, skills)

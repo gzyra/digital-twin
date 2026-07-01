@@ -1,9 +1,0 @@
-{
-  "skill_name": "cxaia_did_overview",
-  "captured_at": "2026-06-30T14:51:18.079474+00:00",
-  "outputs": {
-    "did_details": "I couldn't find any records for deal ID 7990219 in the available opportunity data.\n\nSummary of the searches performed:\n- Deal header information: No data found for opportunity deal ID 7990219.\n- Deal metadata (customer, CAV_BU_ID, opportunity URL, ATR values, product groups): No results returned.\n- Opportunity line items and line-level risk details: No records found.\n- Deal-level risk category: No results returned.\n- Customer pulse: No results returned because the deal could not be located.\n\nAs a result, the following information is unavailable for deal 7990219:\n- Customer name\n- CAV_BU_ID\n- Opportunity ID and opportunity URL\n- Overall Deal ATR\n- Expected Total ATR\n- Product Mapping Group\n- Deal-level risk category\n- Line-item details\n- Customer pulse\n- Related or parent opportunity information\n- Primary partner information\n- Prior contract expiration date\n\nIt is possible that:\n- The deal ID is incorrect, or\n- The deal is not available in the opportunity dataset being queried.\n\n**Data Filters Applied:** Opportunity Deal ID is 7990219\n\nWould you like me to show you a summary overview of deal 7990219 after you verify the deal ID, or search for a deal using a customer name or opportunity ID instead?",
-    "deal_id": "7990219",
-    "summary": "No data found for deal 7990219; opportunity not located in the dataset. Data filters indicate the opportunity deal ID 7990219, but all related records (customer, CAV_BU_ID, URL, ATR values, product mappings, line items, risk, and related opportunities) are unavailable."
-  }
-}
