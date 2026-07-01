@@ -1,38 +1,27 @@
 {
-  "name": "SFDC: Get DID Details",
-  "description": "Retrieve Salesforce opportunity details for a specific, known DID. Uses a saved SF session (state_sf.json) to skip the login flow entirely — no SSO redirect, no 35-second wait.",
+  "name": "SFDC: View Opportunity Details (Known DID)",
+  "description": "View complete Salesforce opportunity details for a known DID (Deal ID = Opportunity ID). DOES NOT search or look up DIDs — requires a specific DID/opportunity ID as input. Shows fields like Opportunity Name, Stage, Owner, Notes, Close Date, etc. Only use when you already have the DID.",
   "created": "2026-06-30",
   "auth_state": "state_sf.json",
   "steps": [
     {
-      "description": "Navigate to Salesforce Lightning (expects logged-in session)",
+      "description": "Navigate to Salesforce Classic (expects logged-in session)",
       "action": "navigate",
-      "url": "https://ciscosales.lightning.force.com"
-    },
-    {
-      "description": "Wait for global header to load",
-      "action": "wait_for_selector",
-      "selector": ".slds-global-header",
-      "timeout_s": 30
-    },
-    {
-      "description": "Click Search button",
-      "action": "click",
-      "selector": "button[aria-label='Search']"
+      "url": "https://ciscosales.my.salesforce.com/"
     },
     {
       "description": "Wait for search input field to appear",
       "action": "wait_for_selector",
-      "selector": "input.search-input, input[placeholder='Search...']",
+      "selector": "#phSearchInput",
       "timeout_s": 10,
       "state": "visible"
     },
     {
       "description": "Enter DID parameter into search box",
       "action": "parameter_input",
-      "selector": "input.search-input, input[placeholder='Search...']",
+      "selector": "#phSearchInput",
       "param_name": "did",
-      "param_description": "DID number to search for in Salesforce",
+      "param_description": "DID number = the unique Salesforce Opportunity ID",
       "value": "",
       "press_enter": true
     },
@@ -43,11 +32,8 @@
     },
     {
       "description": "Click opportunity record link in search results",
-      "action": "locator_click",
-      "label": "Click opportunity record link",
-      "selector": "a[data-special-link='true'].outputLookupLink",
-      "click_method": "js",
-      "timeout_s": 20
+      "action": "click",
+      "selector": "th a[href^=\"/006\"]"
     },
     {
       "description": "Wait for page to settle",
@@ -55,57 +41,45 @@
       "seconds": 3
     },
     {
-      "description": "Click Details tab",
-      "action": "locator_click",
-      "label": "Click Details tab",
-      "selector": "a[data-label='Details']",
-      "click_method": "js",
-      "timeout_s": 20
-    },
-    {
-      "description": "Wait for Details tab content to load",
+      "description": "Wait for opportunity details page to load",
       "action": "wait_for_selector",
-      "selector": ".slds-tabs_default__content.slds-show",
+      "selector": ".pbBody",
       "timeout_s": 20,
       "state": "visible"
-    },
-    {
-      "description": "Final wait before extracting details",
-      "action": "wait",
-      "seconds": 2
     }
   ],
   "outputs": [
     {
       "name": "opportunity_details",
       "type": "selector",
-      "selector": ".slds-tabs_default__content.slds-show",
+      "selector": ".pbBody",
       "label": "Opportunity Details",
       "parse": true,
+      "parse_instructions": "Extract all opportunity fields from the Salesforce Classic detail page. The deal_id/DID is the opportunity being viewed — NOT any DID mentioned in the opportunity notes text. Look for 'Important Opportunity Information' section for main fields like Account Name, Stage, Close Date, Opportunity Owner. The 'Products & Services' section contains TCV/ACV/ATR amounts. The 'Oppty Notes/Next Steps' section near the bottom contains all dated notes — extract the COMPLETE text without truncation.",
       "fields": [
-        {"name": "account_name",                    "description": "Account Name"},
-        {"name": "deal_id",                         "description": "Deal id / DID number"},
-        {"name": "forecasting_position",            "description": "Forecasting Position"},
-        {"name": "opportunity_owner",               "description": "Opportunity Owner"},
-        {"name": "opportunity_name",                "description": "Opportunity Name"},
-        {"name": "stage",                           "description": "Stage"},
-        {"name": "forecast_status",                 "description": "Forecast Status"},
-        {"name": "opportunity_notes",               "description": "Oppty Notes / Next Steps — full text of all dated entries"},
-        {"name": "close_date",                      "description": "Close Date"},
-        {"name": "prior_contract_expiration_date",  "description": "Prior Contract Expiration Date"},
-        {"name": "renewal_quarter_due",             "description": "Renewal Quarter Due"},
-        {"name": "be_group",                        "description": "BE Group"},
-        {"name": "renewal_opp_sav",                 "description": "Renewal Opp SAV"},
-        {"name": "service_amount_tcv",              "description": "Service Amount TCV ($000s)"},
-        {"name": "service_amount_acv",              "description": "Service Amount ACV ($000s)"},
-        {"name": "service_atr",                     "description": "Service ATR ($000s)"},
-        {"name": "expected_services_attrition",     "description": "Expected Services Attrition ($000s)"}
+        {"name": "deal_id",                         "description": "The numeric DID (Deal ID) that was searched for — same as input parameter, NOT any DID mentioned in opportunity notes"},
+        {"name": "account_name",                    "description": "Account Name — the customer account for this opportunity"},
+        {"name": "opportunity_name",                "description": "Opportunity Name — the full name/title of the deal"},
+        {"name": "opportunity_owner",               "description": "Opportunity Owner — the Cisco sales rep or account manager responsible"},
+        {"name": "stage",                           "description": "Stage — current deal stage (e.g. '5 - Negotiate')"},
+        {"name": "forecast_status",                 "description": "Forecast Status — commit/best case/etc."},
+        {"name": "close_date",                      "description": "Close Date — expected close/contract end date"},
+        {"name": "prior_contract_expiration_date",  "description": "Prior Contract Expiration Date — when the previous contract expires"},
+        {"name": "opportunity_notes",               "description": "Oppty Notes/Next Steps — ALL dated notes from the opportunity record (full text of all dated entries, do NOT truncate)"},
+        {"name": "forecasting_position",            "description": "Forecasting Position — position in sales forecast"},
+        {"name": "renewal_quarter_due",             "description": "Renewal Quarter Due — when renewal is forecasted (e.g. Q1-FY27)"},
+        {"name": "be_group",                        "description": "BE Group — business entity groups involved"},
+        {"name": "renewal_opp_sav",                 "description": "Renewal Opp SAV — SAV number for renewal opportunity"},
+        {"name": "service_amount_tcv",              "description": "Service Amount (TCV) — service total contract value in $000s"},
+        {"name": "service_amount_acv",              "description": "Service Amount (ACV) — service annual contract value in $000s"},
+        {"name": "service_atr",                     "description": "Service ATR — service annual total revenue in $000s"},
+        {"name": "expected_services_attrition",     "description": "Expected Services Attrition — expected service dollar attrition in $000s"},
+        {"name": "opportunity_team",                "description": "Opportunity Team — list of team members (e.g. Account Manager, Renewal Manager, Renewal Specialist) with their roles"}
       ]
     }
   ],
-  "description": "Retrieve Salesforce opportunity details for a specific, known DID. Uses a saved SF session (state_sf.json) to skip the login flow entirely — no SSO redirect, no 35-second wait.",
   "requires": ["did"],
-  "provides": ["account_name", "deal_id", "forecasting_position", "opportunity_owner", "opportunity_name", "stage", "forecast_status", "opportunity_notes", "close_date", "prior_contract_expiration_date"],
-  "goal_tags": ["retrieve opportunity details", "get deal info", "opportunity notes", "oppty notes", "deal details from salesforce", "renewal opportunity"],
+  "provides": ["account_name", "deal_id", "forecasting_position", "opportunity_owner", "opportunity_name", "stage", "forecast_status", "opportunity_notes", "close_date", "prior_contract_expiration_date", "opportunity_team"],
+  "goal_tags": ["view salesforce opportunity", "opportunity details", "show opportunity record", "access opportunity fields", "opportunity owner", "opportunity stage", "salesforce record details"],
   "system": "salesforce"
 }

@@ -26,8 +26,8 @@ auth_captures:
     domain_hint: "cisco.com"
     keep_domains: ["cisco.com"]        # only Cisco SSO cookies; strip analytics/tracking
   sf:
-    description: "Salesforce Lightning — derived via Cisco SSO (no extra login needed)"
-    url: "https://ciscosales.lightning.force.com"
+    description: "Salesforce Classic — derived via Cisco SSO (no extra login needed)"
+    url: "https://ciscosales.my.salesforce.com/"
     state_file: "state_sf.json"
     type: "manual"
     username_selector: "input[name='identifier'], input[type='email']"
@@ -56,7 +56,7 @@ load_timeout_ms: 60000
 
 # Common URLs shown as quick options during skill recording
 common_urls:
-  SalesForce: "https://ciscosales.lightning.force.com/lightning"
+  SalesForce: "https://ciscosales.my.salesforce.com/"
   CiscoReady: "https://ciscoready.cloudapps.cisco.com/#/welcome"
   "CX AIA": "https://cxassistant.cisco.com/"
   Google: "https://www.google.com"

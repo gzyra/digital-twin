@@ -1302,7 +1302,19 @@ async def run_selected_skill(skill_name: str, inline_hint: str = "") -> None:
         if all_outputs:
             context.update(all_outputs)
             cl.user_session.set("skill_context", context)
-            save_result(skill_name, all_outputs)
+            
+            # Build parameterized cache key for precise result matching
+            cache_key = skill_name
+            if params:
+                param_values = "_".join(str(v).replace(" ", "_")[:20] for v in params.values())
+                cache_key = f"{skill_name}_{param_values}"
+            
+            # Save with parameterized cache key
+            save_result(cache_key, all_outputs)
+            # Also save with plain skill name for backwards compatibility
+            if cache_key != skill_name:
+                save_result(skill_name, all_outputs)
+            
             await emit_dashboard_update(skill_name, all_outputs)
             await emit_kpis()
 
