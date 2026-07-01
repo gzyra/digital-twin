@@ -20,7 +20,7 @@ auth_captures:
   cxaia:
     description: "Primary Cisco SSO session — CX AIA portal"
     url: "https://cxassistant.cisco.com/"
-    state_file: "state.json"
+    state_file: "state_cxaia.json"
     type: "manual"
     username_selector: "input[name='identifier'], input[type='email']"
     domain_hint: "cisco.com"
@@ -28,16 +28,24 @@ auth_captures:
   sf:
     description: "Salesforce Lightning — derived via Cisco SSO (no extra login needed)"
     url: "https://ciscosales.lightning.force.com"
-    state_file: "sf_state.json"
+    state_file: "state_sf.json"
+    type: "manual"
+    username_selector: "input[name='identifier'], input[type='email']"
+    domain_hint: "force.com"
+    keep_domains: ["force.com"]  # SF session only; drop all Cisco/tracking cookies
+  ciscoready:
+    description: "Cisco Ready — derived via Cisco SSO"
+    url: "https://ciscoready.cloudapps.cisco.com/#/welcome"
+    state_file: "state_ciscoready.json"
     type: "sso_derived"
-    load_from: "state.json"
-    ready_selector: ".slds-global-header"
-    domain_hint: "salesforce.com"
-    keep_domains: ["salesforce.com", "force.com"]  # SF session only; drop all Cisco/tracking cookies
+    load_from: "state_cxaia.json"
+    ready_selector: "app-root, .welcome-page, main"
+    domain_hint: "cisco.com"
+    keep_domains: ["cisco.com", "cloudapps.cisco.com"]
 
 # ── Runtime defaults ──────────────────────────────────────────────────────────
 # Used by recorder.py and replay.py — point to the primary session file.
-auth_state: "state.json"
+auth_state: "state_cxaia.json"
 start_url: "https://cxassistant.cisco.com/"
 
 headless: false
@@ -49,6 +57,7 @@ load_timeout_ms: 60000
 # Common URLs shown as quick options during skill recording
 common_urls:
   SalesForce: "https://ciscosales.lightning.force.com/lightning"
+  CiscoReady: "https://ciscoready.cloudapps.cisco.com/#/welcome"
   "CX AIA": "https://cxassistant.cisco.com/"
   Google: "https://www.google.com"
 
@@ -62,6 +71,25 @@ startup_skills:
 
 memory_dir: "memory"
 startup_skill_ttl_hours: 24
+
+# ── Dashboard KPIs (center hero strip) ────────────────────────────────────
+# Big-number cards shown across the top of the chat area. Each KPI pulls from a
+# skill's cached memory result. Supported value sources per entry:
+#   value: "..."        static text (placeholder)
+#   skill + column      sum a numeric column from that skill's first table output
+#   skill + count_rows  count rows in that skill's first table output
+#   skill + field       read a single named field from that skill's outputs
+# Optional formatting: prefix, suffix.
+dashboard_kpis:
+  - label: "Top-10 ATR"
+    skill: cxaia_top_10_dids
+    column: "ATR"
+    prefix: "$"
+  - label: "Deals Tracked"
+    skill: cxaia_top_10_dids
+    count_rows: true
+  - label: "ATR to Renew"
+    value: "—"
 
 # ── LLM ──────────────────────────────────────────────────────────────────────
 # llm_provider: litellm | circuit

@@ -1,20 +1,7 @@
 {
   "skill_name": "sfdc_search_opportunity",
-  "captured_at": "2026-06-30T13:15:39.822137+00:00",
+  "captured_at": "2026-06-30T14:48:48.525786+00:00",
   "outputs": {
-    "opportunity_details": "Account Name\nＫＤＤＩ（株）\nPreview\nEdit Account Name\nDeal id\n73476575\nUCD C4 Name\nKDDI\nUCD C4 ID\n100195626\nForecasting Position\nCXR_APJC_SP_005 (ROC_JP-E_SP_PR_KDDI_CORE_TM)\nchange\nDeal Summary\n Deal-at-a-Glance\nNotes\n Summarize Notes\nImportant Opportunity Information\nOpportunity Owner\nKentaro Nakano\nPreview\nChange Owner\nOpportunity Name\nRNW_KDDI_Q3FY2027_KDDI CORPORATION_TS+AS_SOGO_FY27\nEdit Opportunity Name\nStage\n1 - Qualify\nEdit Stage\nSagpe Request ID\nEdit Sagpe Request ID\nForecast Status\nUpside\nEdit Forecast Status\nOppty Notes/Next Steps\nHelp Oppty Notes/Next Steps\n2026/04/03 (Nakano Kentaro) : Sogo FY27 support ATR.\nClose Date\n3/31/2027\nEdit Close Date\nPrior Contract Expiration Date\nHelp Prior Contract Expiration Date\n3/31/2027\nEdit Prior Contract Expiration Date\nRenewal Quarter Due\nQ3-FY27\nBE Group\nTS-S,AS-S\nRenewal Opp SAV\n283569665\nCompetitors\nHelp Competitors\nOthers\nOther Competitor\nEdit Other Competitor\nOpportunity Flags\nEdit Opportunity Flags\nServices Information\nTerritory Information\nAI Information\nPartners\nOther Opportunity Information\nIB Case Information\nOpportunity Closing Fields",
-    "account_name": "ＫＤＤＩ（株）",
-    "deal_id": "73476575",
-    "forecasting_position": "CXR_APJC_SP_005 (ROC_JP-E_SP_PR_KDDI_CORE_TM)",
-    "opportunity_owner": "Kentaro Nakano",
-    "opportunity_name": "RNW_KDDI_Q3FY2027_KDDI CORPORATION_TS+AS_SOGO_FY27",
-    "stage": "1 - Qualify",
-    "forecast_status": "Upside",
-    "opportunity_notes": "2026/04/03 (Nakano Kentaro) : Sogo FY27 support ATR.",
-    "close_date": "3/31/2027",
-    "prior_contract_expiration_date": "3/31/2027",
-    "renewal_quarter_due": "Q3-FY27",
-    "be_group": "TS-S,AS-S",
-    "renewal_opp_sav": "283569665"
+    "opportunity_details": ""
   }
 }

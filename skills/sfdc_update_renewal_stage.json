@@ -1,8 +1,8 @@
 {
   "name": "SFDC: Update Renewal Stage",
-  "description": "Open a Salesforce opportunity by DID and update its renewal stage field. Uses a saved SF session (sf_state.json) to skip the login flow.",
+  "description": "Open a Salesforce opportunity by DID and update its renewal stage field. Uses a saved SF session (state_sf.json) to skip the login flow.",
   "created": "2026-06-30",
-  "auth_state": "sf_state.json",
+  "auth_state": "state_sf.json",
   "steps": [
     {
       "action": "navigate",

@@ -2,10 +2,10 @@ from pathlib import Path
 from typing import Awaitable, Callable
 
 from playwright.async_api import async_playwright
-import yaml
 
-with open("config.yaml") as f:
-    _CFG = yaml.safe_load(f)
+from core.config import get_config
+
+_CFG = get_config()
 
 
 ACTION_TIMEOUT_MS = int(_CFG.get("action_timeout_ms", 60000))

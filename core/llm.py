@@ -6,13 +6,13 @@ import re
 import threading
 import time
 from collections.abc import Iterator
-from pathlib import Path
 
 import litellm
 import requests
-import yaml
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import AzureChatOpenAI
+
+from core.config import get_config
 
 _TOKEN_BUFFER_SECS = 60
 _TOKEN_FETCH_RETRIES = 3
@@ -20,18 +20,7 @@ _BRIDGEIT_TOKEN_CACHE: dict = {"token": None, "expires_at": 0.0}
 _BRIDGEIT_TOKEN_LOCK = threading.Lock()
 
 
-def _load_cfg() -> dict:
-    cfg_path = Path(os.getenv("DIGITAL_TWIN_CONFIG", "config.yaml"))
-    if not cfg_path.exists():
-        raise FileNotFoundError(
-            f"Missing config file: {cfg_path}. "
-            "Create it from config.yaml.example."
-        )
-    with cfg_path.open("r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
-
-
-_CFG = _load_cfg()
+_CFG = get_config()
 MODEL = _CFG.get("model", "gpt-4o-mini")
 LLM_PROVIDER = str(_CFG.get("llm_provider", "litellm")).lower()
 
@@ -302,3 +291,93 @@ def select_skill_by_intent(user_message: str, catalog: list[dict]) -> dict | Non
     except Exception as exc:
         logging.warning("[llm] skill intent selection failed (%s)", exc)
         return None
+
+
+def plan_goal(user_goal: str, catalog: list[dict]) -> list[dict]:
+    """Break a natural-language goal into an ordered plan of skill invocations.
+
+    Returns a list of step dicts::
+
+        [{"skill": "<file_name>", "inputs": {"param": "<value|$REF>"},
+          "for_each": <bool>, "reason": "<why>"}]
+
+    Input value references the executor understands:
+      - ``$ASK``              — pause and ask the user for this value
+      - ``$MEMORY:key``       — reuse a value already captured in memory/context
+      - ``$FROM:skill.field`` — use a field produced by an earlier plan step
+      - literal string        — use as-is
+
+    ``for_each: true`` means: run this skill once per item that the referenced
+    ``$FROM`` source yields (e.g. one row per deal_id). Returns [] when the goal
+    cannot be mapped to available skills.
+    """
+    if not catalog:
+        return []
+
+    catalog_text = "\n".join(
+        f'- file_name: "{e["file_name"]}" | description: "{e.get("description", "")}" '
+        f'| requires: {e.get("requires", [])} | provides: {e.get("provides", [])}'
+        for e in catalog
+    )
+
+    prompt = (
+        "You are a planner for a browser-automation agent. Decompose the user's "
+        "goal into an ordered sequence of skill runs using ONLY the skills below.\n"
+        "Chain skills so that a skill's `provides` feed a later skill's `requires`.\n\n"
+        "Reply ONLY with a JSON object of this exact shape:\n"
+        '{"plan": [{"skill": "<file_name>", "inputs": {"<param>": "<value>"}, '
+        '"for_each": false, "reason": "<short why>"}]}\n\n'
+        "Rules for input values:\n"
+        '  - "$ASK" if the user must supply it and it is not otherwise available.\n'
+        '  - "$MEMORY:<key>" to reuse a value already in memory/context.\n'
+        '  - "$FROM:<skill_file_name>.<field>" to use a field produced by an earlier step.\n'
+        "  - a literal string when the value is known from the goal text.\n"
+        'Set "for_each": true when the step should repeat once per item produced by '
+        "its $FROM source (e.g. one run per deal in a list).\n"
+        'If no skills fit the goal, return {"plan": []}.\n\n'
+        f"Available skills:\n{catalog_text}\n\n"
+        f'User goal: "{user_goal}"'
+    )
+
+    try:
+        if LLM_PROVIDER == "circuit":
+            model = _build_circuit_model(json_response=True)
+            resp = model.invoke([HumanMessage(content=prompt)])
+            raw = resp.content
+        else:
+            resp = litellm.completion(
+                model=MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"},
+            )
+            raw = resp.choices[0].message.content
+
+        raw = str(raw).strip()
+        if raw.startswith("```"):
+            raw = re.sub(r"^```[a-z]*\n?", "", raw)
+            raw = re.sub(r"\n?```$", "", raw.strip())
+
+        parsed = json.loads(raw)
+        plan = parsed.get("plan")
+        if not isinstance(plan, list):
+            return []
+
+        valid_files = {e["file_name"] for e in catalog}
+        cleaned: list[dict] = []
+        for step in plan:
+            if not isinstance(step, dict):
+                continue
+            name = step.get("skill")
+            if name not in valid_files:
+                continue
+            cleaned.append({
+                "skill": name,
+                "inputs": step.get("inputs") or {},
+                "for_each": bool(step.get("for_each", False)),
+                "reason": step.get("reason", ""),
+            })
+        return cleaned
+
+    except Exception as exc:
+        logging.warning("[llm] goal planning failed (%s)", exc)
+        return []

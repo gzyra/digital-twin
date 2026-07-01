@@ -6,7 +6,8 @@ lib/*
 pyvenv.cfg
 .chainlit/
 config.yaml.example
-state.json
-sf_state.json
+state_cxaia.json
+state_sf.json
+state_ciscoready.json
 core/__pycache__/*
 memory/*

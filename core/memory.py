@@ -15,10 +15,9 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-import yaml
+from core.config import get_config
 
-with open("config.yaml") as _f:
-    _CFG = yaml.safe_load(_f)
+_CFG = get_config()
 
 MEMORY_DIR = Path(_CFG.get("memory_dir", "memory"))
 MEMORY_DIR.mkdir(parents=True, exist_ok=True)

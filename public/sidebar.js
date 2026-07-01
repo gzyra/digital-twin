@@ -241,8 +241,123 @@ function renderDashboard() {
 
 function syncDashboard() {
   parseDashboardMessages();
+  parseKpiMessages();
   renderDashboard();
+  renderKpis();
 }
+
+// ---------- KPI hero strip ----------
+
+window.__kpiData = window.__kpiData || [];
+
+function hideMessageContainer(el) {
+  const knownSelectors = [
+    '[data-testid="step"]', '.step', 'article',
+    '[class*="step"]', '[class*="message-container"]', '[class*="chat-message"]',
+  ];
+  for (const sel of knownSelectors) {
+    const container = el.closest(sel);
+    if (container) {
+      container.style.setProperty('display', 'none', 'important');
+      return;
+    }
+  }
+  let node = el;
+  for (let i = 0; i < 15; i++) {
+    node = node.parentElement;
+    if (!node || node === document.body) break;
+    if (node.parentElement && node.parentElement.children.length > 1) {
+      node.style.setProperty('display', 'none', 'important');
+      break;
+    }
+  }
+}
+
+function parseKpiMessages() {
+  let codeBlocks = Array.from(
+    document.querySelectorAll('code[class*="kpi-data"], code[class*="kpi_data"]')
+  );
+  if (codeBlocks.length === 0) {
+    document.querySelectorAll('pre code, code').forEach(el => {
+      const t = (el.textContent || '').trim();
+      if (t.startsWith('{') && t.includes('"kpis"')) codeBlocks.push(el);
+    });
+  }
+  codeBlocks.forEach(el => {
+    try {
+      const data = JSON.parse((el.textContent || '').trim());
+      if (data && Array.isArray(data.kpis)) window.__kpiData = data.kpis;
+    } catch (_) {}
+    hideMessageContainer(el);
+  });
+}
+
+function renderKpis() {
+  const strip = document.querySelector('#kpi-strip');
+  if (!strip) return;
+  const kpis = window.__kpiData || [];
+  if (kpis.length === 0) {
+    strip.style.display = 'none';
+    document.body.classList.remove('dt-has-kpis');
+    return;
+  }
+  strip.style.display = 'flex';
+  document.body.classList.add('dt-has-kpis');
+  strip.innerHTML = kpis.map(k => `
+    <div class="kpi-card">
+      <div class="kpi-value">${esc(String(k.value))}</div>
+      <div class="kpi-label">${esc(String(k.label))}</div>
+    </div>`).join('');
+}
+
+function createKpiStrip() {
+  if (document.querySelector('#kpi-strip')) return;
+  const strip = document.createElement('div');
+  strip.id = 'kpi-strip';
+  strip.style.display = 'none';
+  document.body.appendChild(strip);
+}
+
+// ---------- Tips card (lower-right) ----------
+
+const DT_TIPS = [
+  'Type <b>/goal &lt;objective&gt;</b> to have the agent plan & chain skills automatically.',
+  'Click any skill in the left panel to run it instantly.',
+  'Use <b>/run skill 73595369</b> to pass a DID inline — no prompts.',
+  'A skill\u2019s <i>gives</i> can feed another skill\u2019s <i>needs</i> — that\u2019s how chaining works.',
+  'Type <b>/memory</b> to see cached results and their age.',
+  'Type <b>/audit</b> to review the last skill executions.',
+];
+
+function createTips() {
+  if (document.querySelector('#dt-tips')) return;
+  if (localStorage.getItem('dtTipsHidden') === '1') return;
+  let idx = Math.floor(Math.random() * DT_TIPS.length);
+
+  const card = document.createElement('div');
+  card.id = 'dt-tips';
+  card.innerHTML = `
+    <div class="dt-tips-head">
+      <span class="dt-tips-title">💡 Tip</span>
+      <div>
+        <button class="dt-tips-next" title="Next tip">↻</button>
+        <button class="dt-tips-close" title="Hide tips">✕</button>
+      </div>
+    </div>
+    <div class="dt-tips-body">${DT_TIPS[idx]}</div>`;
+  document.body.appendChild(card);
+
+  const body = card.querySelector('.dt-tips-body');
+  card.querySelector('.dt-tips-next').addEventListener('click', () => {
+    idx = (idx + 1) % DT_TIPS.length;
+    body.innerHTML = DT_TIPS[idx];
+  });
+  card.querySelector('.dt-tips-close').addEventListener('click', () => {
+    localStorage.setItem('dtTipsHidden', '1');
+    card.remove();
+  });
+}
+
 
 function expandDashboard() {
   const dash = document.querySelector('.custom-dashboard');
@@ -370,6 +485,8 @@ function createSidebar() {
 
 createSidebar();
 createDashboard();
+createKpiStrip();
+createTips();
 
 // Console helper for debugging in browser devtools: window.dtDebug()
 window.dtDebug = function() {
@@ -417,11 +534,13 @@ const observer = new MutationObserver(() => {
   }
   // Always re-parse so new dashboard-data messages are hidden and rendered
   parseDashboardMessages();
+  parseKpiMessages();
   const newKeys = Object.keys(window.__dashboardData).sort().join(',');
   if (newKeys !== lastDashboardKeys) {
     lastDashboardKeys = newKeys;
     renderDashboard();
   }
+  renderKpis();
 });
 
 setTimeout(() => {

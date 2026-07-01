@@ -136,6 +136,8 @@ When `--auth` points to a non-default session file it is saved into the skill JS
 | Command / phrase | What happens |
 |---|---|
 | *describe what you want* | Agent picks the best matching skill and asks for confirmation |
+| `/goal <objective>` | Agent plans a **multi-skill chain** to achieve the goal, shows it, and runs it on confirmation |
+| `/plan <objective>` | Alias for `/goal` |
 | `run <skill_name>` | Run a skill; prompts for required inputs |
 | `run <skill_name> <hint>` | Run with an inline hint — parameters extracted automatically |
 | `/run <skill_name> [hint]` | Same, explicit prefix form |
@@ -242,6 +244,60 @@ Value collected before the skill runs, then silently typed during execution.
 ```json
 { "action": "wait_for_url", "pattern": "**/lightning/r/**", "timeout_s": 20 }
 ```
+
+### Goal-driven planning & routing metadata
+
+The assistant routes requests using an auto-generated **routing table** built from each
+skill's metadata, so guidance stays in sync as you add skills manually. Each skill JSON
+may declare optional routing fields (all are derived automatically when omitted):
+
+```json
+{
+  "name": "CX AIA DID Overview",
+  "description": "Full risk/adoption overview for one deal.",
+  "requires": ["deal_id"],
+  "provides": ["cav_bu_id", "adoption_score", "opportunity_url"],
+  "goal_tags": ["deal risk", "adoption score"],
+  "system": "cxaia"
+}
+```
+
+- **`requires`** — inputs the skill needs (defaults to its declared inputs).
+- **`provides`** — output fields the skill yields (defaults to its declared outputs).
+- **`goal_tags`** — free-text intents the skill satisfies (optional).
+
+When the user types `/goal <objective>`, the planner (`core.llm.plan_goal`) returns an
+ordered plan of skill runs and chains them so one skill's `provides` feed another's
+`requires`. Input values in a plan may reference:
+
+- `$ASK` — pause and ask the user,
+- `$MEMORY:<key>` — reuse a value already captured in context/memory,
+- `$FROM:<skill>.<field>` — use a field produced by an earlier plan step.
+
+A step marked `for_each` repeats once per item its `$FROM` source yields (e.g. one run
+per deal in a list). The full plan is shown for a single confirmation before it runs.
+
+### Dashboard KPIs (center hero strip)
+
+Big-number cards across the top of the chat are configured under `dashboard_kpis` in
+`config.yaml`. Each KPI pulls from a skill's cached memory result:
+
+```yaml
+dashboard_kpis:
+  - label: "Top-10 ATR"
+    skill: cxaia_top_10_dids
+    column: "ATR"          # sum this numeric column from the skill's table output
+    prefix: "$"
+  - label: "Deals Tracked"
+    skill: cxaia_top_10_dids
+    count_rows: true       # count rows in the skill's table output
+  - label: "ATR to Renew"
+    value: "—"             # static placeholder
+```
+
+Supported value sources: `value` (static), `skill`+`column` (sum a numeric column),
+`skill`+`count_rows` (row count), or `skill`+`field` (single named output). Optional
+`prefix`/`suffix` format the displayed value.
 
 ### Per-skill auth session
 

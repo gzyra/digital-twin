@@ -19,12 +19,14 @@
       "param_name": "deal_id",
       "param_description": "The deal or opportunity ID number (digits only)",
       "template": "Give me an overview of a deal {deal_id}",
-      "value": "69285625",
+      "value": "",
       "press_enter": true
     },
     {
-      "action": "wait",
-      "seconds": 120
+      "action": "wait_for_selector",
+      "selector": "pol-ai-chat-message-actions button:nth-child(3)",
+      "state": "visible",
+      "timeout_s": 120
     },
     {
       "action": "wait_and_click_last",
@@ -49,6 +51,14 @@
         {
           "name": "customer_name",
           "description": "Customer or account name"
+        },
+        {
+          "name": "cav_bu_id",
+          "description": "CAV_BU_ID — internal Cisco customer business unit identifier"
+        },
+        {
+          "name": "opportunity_url",
+          "description": "Direct Salesforce URL for the opportunity record"
         },
         {
           "name": "deal_stage",

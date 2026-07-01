@@ -1,5 +1,28 @@
 /* Custom sidebar for skills + right-side dashboard panel */
 
+/* ---- Design tokens ---- */
+:root {
+  --dt-bg-sidebar: #1a1a1a;
+  --dt-bg-panel: #111;
+  --dt-bg-card: #1c1c1c;
+  --dt-bg-card-head: #222;
+  --dt-border: #2a2a2a;
+  --dt-border-strong: #3a3a3a;
+  --dt-text: #e0e0e0;
+  --dt-text-dim: #888;
+  --dt-text-faint: #666;
+  --dt-accent: #0099ff;
+  --dt-accent-bg: #0084d4;
+  --dt-accent-soft: #7ec8f0;
+  --dt-ok: #37c871;
+  --dt-warn: #e0a642;
+  --dt-sidebar-w: 240px;
+  --dt-dashboard-w: 340px;
+  --dt-kpi-h: 84px;
+  --dt-radius: 6px;
+  --dt-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
 /* ---- Left sidebar (skills) ---- */
 .custom-sidebar {
   position: fixed;
@@ -78,6 +101,7 @@
   color: #ccc !important;
   display: block !important;
   visibility: visible !important;
+  padding-bottom: 150px !important;   /* room for the pinned tips card */
   transition: width 0.25s ease, left 0.25s ease, right 0.25s ease,
               top 0.25s ease, height 0.25s ease, border-radius 0.25s ease,
               box-shadow 0.25s ease;
@@ -375,6 +399,137 @@
 pre:has(> code.language-dashboard-data) {
   display: none !important;
 }
+
+/* ---- Hide raw kpi-data code blocks from the chat ---- */
+pre:has(> code.language-kpi-data) {
+  display: none !important;
+}
+
+/* ---- Center KPI hero strip ---- */
+#kpi-strip {
+  position: fixed;
+  top: 0;
+  left: var(--dt-sidebar-w);
+  right: var(--dt-dashboard-w);
+  height: var(--dt-kpi-h);
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, #16181c 0%, #101114 100%);
+  border-bottom: 1px solid var(--dt-border);
+  z-index: 1500;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+
+.kpi-card {
+  flex: 1 1 0;
+  min-width: 150px;
+  background: var(--dt-bg-card);
+  border: 1px solid var(--dt-border);
+  border-radius: 8px;
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: var(--dt-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--dt-accent);
+}
+
+.kpi-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.kpi-label {
+  font-size: 11px;
+  color: var(--dt-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 3px;
+}
+
+/* Push chat content below the KPI strip (only when KPIs are present) */
+body.dt-has-kpis .cl-main-container,
+body.dt-has-kpis .cl-chat-container,
+body.dt-has-kpis [class*="thread-container"],
+body.dt-has-kpis [class*="messages-container"] {
+  margin-top: var(--dt-kpi-h) !important;
+}
+
+/* ---- Tips card (lower-right) ---- */
+#dt-tips {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  width: calc(var(--dt-dashboard-w) - 24px);
+  max-width: 320px;
+  background: var(--dt-bg-card);
+  border: 1px solid var(--dt-border-strong);
+  border-radius: 8px;
+  box-shadow: var(--dt-shadow);
+  z-index: 2500;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--dt-text);
+  overflow: hidden;
+}
+
+.dt-tips-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  background: var(--dt-bg-card-head);
+  border-bottom: 1px solid var(--dt-border);
+}
+
+.dt-tips-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dt-accent-soft);
+}
+
+.dt-tips-next,
+.dt-tips-close {
+  background: transparent;
+  border: none;
+  color: var(--dt-text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.dt-tips-next:hover,
+.dt-tips-close:hover {
+  background: var(--dt-accent-bg);
+  color: #fff;
+}
+
+.dt-tips-body {
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #cfcfcf;
+}
+
+.dt-tips-body b { color: #fff; }
+.dt-tips-body i { color: var(--dt-accent-soft); font-style: normal; }
+
 
 /* ---- Main chat area — squeezed between both panels ---- */
 .cl-main-container,

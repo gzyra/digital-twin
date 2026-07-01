@@ -14,10 +14,10 @@ import chainlit as cl
 import yaml
 
 from core.audit import format_audit_summary, log_end, log_start, recent_runs
-from core.llm import chat_completion, select_skill_by_intent, stream_chat_completion
+from core.llm import chat_completion, plan_goal, select_skill_by_intent, stream_chat_completion
 from core.memory import age_description, all_outputs_for_llm, is_stale, list_results, load_result, save_result
 from core.replay import run_skill
-from core.skills import delete_skill, list_skills, load_skill, skill_auto_params, skill_catalog, skill_inputs, skill_outputs, skill_parameters
+from core.skills import delete_skill, list_skills, load_skill, routing_table, skill_auto_params, skill_catalog, skill_inputs, skill_outputs, skill_parameters
 from recorder import record_skill
 
 
@@ -42,6 +42,111 @@ async def emit_dashboard_update(skill_name: str, outputs: dict, status: str = ""
         "status": status,
     })
     await cl.Message(content=f"```dashboard-data\n{data}\n```").send()
+
+
+# ---------- KPI hero-strip helpers ----------
+def _parse_md_table(text: str) -> tuple[list[str], list[list[str]]]:
+    """Parse a markdown table string into (headers, rows). Returns ([], []) on failure."""
+    if not isinstance(text, str):
+        return [], []
+    lines = [l.strip() for l in text.split("\n") if l.strip().startswith("|")]
+    if len(lines) < 2:
+        return [], []
+
+    def cells(line: str) -> list[str]:
+        return [c.strip() for c in line.strip().strip("|").split("|")]
+
+    headers = cells(lines[0])
+    rows = [cells(l) for l in lines[2:] if l.strip("|").strip()]
+    return headers, rows
+
+
+def _to_number(text: str) -> float | None:
+    """Extract a numeric value from a cell like '$1,234.5' or '73%' → float."""
+    cleaned = re.sub(r"[^\d.\-]", "", text or "")
+    if cleaned in ("", "-", ".", "-."):
+        return None
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
+def _format_number(n: float) -> str:
+    """Compact human-readable number: 1.2M, 34.5K, 987."""
+    absn = abs(n)
+    if absn >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if absn >= 1_000:
+        return f"{n / 1_000:.1f}K"
+    if n == int(n):
+        return str(int(n))
+    return f"{n:.1f}"
+
+
+def _compute_kpis() -> list[dict]:
+    """Resolve configured dashboard_kpis into [{label, value}] from cached memory."""
+    try:
+        with open("config.yaml") as _f:
+            cfg = yaml.safe_load(_f) or {}
+    except Exception:
+        return []
+
+    kpis_cfg = cfg.get("dashboard_kpis") or []
+    resolved: list[dict] = []
+    for entry in kpis_cfg:
+        label = entry.get("label", "KPI")
+        prefix = entry.get("prefix", "")
+        suffix = entry.get("suffix", "")
+        value: str
+
+        if "value" in entry:
+            value = str(entry["value"])
+        else:
+            skill = entry.get("skill", "")
+            data = load_result(skill) if skill else None
+            outputs = (data or {}).get("outputs", {}) if data else {}
+            if not outputs:
+                value = "—"
+            elif entry.get("field"):
+                value = str(outputs.get(entry["field"], "—"))
+            else:
+                # Use the first markdown-table output for column/row operations
+                table_val = next(
+                    (v for v in outputs.values() if _is_markdown_table(v)), ""
+                )
+                headers, rows = _parse_md_table(table_val)
+                if entry.get("count_rows"):
+                    value = str(len(rows))
+                elif entry.get("column") and headers:
+                    col = entry["column"].lower()
+                    idx = next(
+                        (i for i, h in enumerate(headers) if col in h.lower()), -1
+                    )
+                    if idx >= 0:
+                        total = sum(
+                            _to_number(r[idx]) or 0.0
+                            for r in rows
+                            if idx < len(r)
+                        )
+                        value = _format_number(total)
+                    else:
+                        value = "—"
+                else:
+                    value = "—"
+
+        resolved.append({"label": label, "value": f"{prefix}{value}{suffix}"})
+    return resolved
+
+
+async def emit_kpis() -> None:
+    """Emit a kpi-data message the JS frontend renders as the center hero strip."""
+    kpis = _compute_kpis()
+    if not kpis:
+        return
+    from datetime import datetime, timezone as _tz
+    data = json.dumps({"kpis": kpis, "ts": datetime.now(_tz.utc).isoformat()})
+    await cl.Message(content=f"```kpi-data\n{data}\n```").send()
 
 
 def _is_markdown_table(value: str) -> bool:
@@ -304,6 +409,9 @@ async def run_startup_skills() -> None:
     skills = cl.user_session.get("skills") or []
     reset_chat_history(skills)
 
+    # Publish KPI hero strip now that startup results are cached
+    await emit_kpis()
+
 
 # ---------- helpers to pause for a button click ----------
 async def wait_for_action(message: cl.Message, valid: list[str]) -> dict:
@@ -315,21 +423,39 @@ async def wait_for_action(message: cl.Message, valid: list[str]) -> dict:
 
 def build_chat_system_prompt(skills: list[str]) -> str:
     available_skills = ", ".join(sorted(skills)) if skills else "none recorded"
-    # Include descriptions where available
+    # Auto-generated routing table keeps skill selection guidance in sync with
+    # the skills on disk (their descriptions, requires, and provides metadata).
     catalog = skill_catalog()
-    catalog_lines = "\n".join(
-        f'  • {e["file_name"]}: {e["description"] or e["display_name"]}'
-        for e in catalog
-    )
+    routing_block = routing_table(catalog)
     base = (
         "You are the digital-twin assistant. Help the user automate browser workflows, "
         "explain failures, and answer short task-oriented questions. Keep replies concise and practical. "
-        f"Available saved skills:\n{catalog_lines}\n\n"
+        f"Available saved skills: {available_skills}\n\n"
+        "## Skill routing table\n"
+        "Use this to decide which skill answers a request. A skill's 'gives' fields are the\n"
+        "data it can retrieve; its 'needs' fields are the inputs it requires. Chain skills so\n"
+        "that one skill's output (gives) supplies another skill's input (needs).\n"
+        f"{routing_block}\n\n"
         "To run a skill the user can type its name naturally, use /run <skill_name>, or just describe "
         "what they want — you will propose the right skill automatically.\n"
+        "For a multi-step objective, the user can type `/goal <objective>` and you will plan and "
+        "chain several skills together to achieve it.\n"
+        "**Proactive skill suggestion**: if the user asks for a data field listed under a skill's "
+        "'gives:' section and that data is not already in memory, immediately propose running "
+        "that skill to retrieve it. Example: user asks for CAV_BU_ID → suggest cxaia_did_overview.\n"
         "Type /audit to see the last 10 execution records.\n\n"
         "You also have access to the latest results from automatically-run skills stored in memory. "
-        "Use this data to answer questions, highlight insights, and suggest next actions."
+        "Use this data to answer questions, highlight insights, and suggest next actions.\n\n"
+        "## Domain knowledge\n"
+        "- **DID** (Deal ID) is the single unique identifier that links a deal across ALL systems: "
+        "Salesforce (param name: `did`), CX AIA (param name: `deal_id`), and Cisco Ready all refer "
+        "to the same opportunity with the same numeric DID.\n"
+        "- When the user mentions a DID or deal number, it can be used directly in any skill "
+        "regardless of which system it targets — no translation needed.\n"
+        "- Typical workflow: fetch deal context from CX AIA (cxaia_did_notes / cxaia_did_overview) "
+        "then open the same DID in Salesforce (sfdc_search_opportunity) to view or update the record.\n"
+        "- DIDs are 8-digit numbers (e.g. 73595369). If the user provides one, pre-fill it as the "
+        "`did` / `deal_id` parameter for whichever skill you suggest."
     )
     memory_block = all_outputs_for_llm()
     if memory_block:
@@ -549,6 +675,7 @@ async def show_home(skills: list[str]) -> None:
             "- `add skill` or `learn new skill` to record a new skill\n"
             "- `list skills` to show all saved skills\n"
             "- `run <skill_name>` to execute a skill (will ask for inputs)\n"
+            "- `/goal <objective>` — describe a goal; the agent plans & chains skills to achieve it\n"
             "- `/skill_name [hint]` — shortcut to run any skill directly (e.g. `/cxaia_did_overview 73595369`)\n"
             "- `delete <skill_name>` to remove a skill\n"
             "- `stop recording` to finish an active recording\n"
@@ -778,6 +905,210 @@ async def run_batch_skill(batch_skill: dict) -> None:
     reset_chat_history(skills)
 
 
+# ---------- goal-driven plan execution ----------
+
+def _extract_list_from_text(text: str) -> list[str]:
+    """Extract ordered, unique identifier tokens (e.g. DIDs) from a table/text value."""
+    if not isinstance(text, str):
+        return []
+    tokens = re.findall(r'\[(\d{5,10})\]\(https?://', text)  # markdown links first
+    if not tokens:
+        tokens = re.findall(r'\b(\d{7,10})\b', text)          # bare long numbers
+    seen: set[str] = set()
+    out: list[str] = []
+    for t in tokens:
+        if t not in seen:
+            seen.add(t)
+            out.append(t)
+    return out
+
+
+def _lookup_field(ref_skill: str, ref_field: str, plan_outputs: dict[str, dict]) -> str:
+    """Resolve a $FROM:skill.field reference from prior plan outputs, then memory."""
+    src = plan_outputs.get(ref_skill)
+    if src is None:
+        data = load_result(ref_skill)
+        src = data.get("outputs", {}) if data else {}
+    if ref_field and ref_field in src:
+        return str(src[ref_field])
+    # Fallback: first string value (useful when a skill has a single table output)
+    for v in src.values():
+        if isinstance(v, str) and v.strip():
+            return v
+    return ""
+
+
+def _resolve_input_value(
+    raw: str,
+    ask_values: dict[str, str],
+    context: dict,
+    plan_outputs: dict[str, dict],
+) -> str:
+    """Resolve a single plan input value reference to a concrete string."""
+    if not isinstance(raw, str):
+        return str(raw)
+    val = raw.strip()
+    if val == "$ASK":
+        # $ASK is resolved by the caller (which knows the param name); nothing to do here.
+        return ""
+    if val.startswith("$MEMORY:"):
+        key = val[len("$MEMORY:"):].strip()
+        return str(context.get(key, ""))
+    if val.startswith("$FROM:"):
+        ref = val[len("$FROM:"):].strip()
+        ref_skill, _, ref_field = ref.partition(".")
+        return _lookup_field(ref_skill, ref_field, plan_outputs)
+    return raw
+
+
+async def execute_plan(goal: str, plan: list[dict]) -> None:
+    """Execute an ordered multi-skill plan produced by core.llm.plan_goal.
+
+    Resolves $ASK / $MEMORY / $FROM input references, runs each skill headlessly,
+    caches outputs to memory, and streams progress + dashboard cards. Steps flagged
+    for_each repeat once per item produced by their $FROM source.
+    """
+    if not plan:
+        await cl.Message(content="🤔 I couldn't map that goal to any available skills.").send()
+        return
+
+    context = cl.user_session.get("skill_context") or {}
+
+    # ── Show the plan and ask for a single confirmation ──
+    plan_lines = []
+    for i, step in enumerate(plan, 1):
+        inp = ", ".join(f"{k}={v}" for k, v in step["inputs"].items()) or "no inputs"
+        loop_tag = " _(for each item)_" if step.get("for_each") else ""
+        why = f" — {step['reason']}" if step.get("reason") else ""
+        plan_lines.append(f"{i}. `{step['skill']}` ({inp}){loop_tag}{why}")
+    confirm = await cl.AskActionMessage(
+        content=(
+            f"🧭 **Plan to achieve:** _{goal}_\n\n" + "\n".join(plan_lines) +
+            "\n\nRun this plan?"
+        ),
+        actions=[
+            cl.Action(name="yes", value="yes", label="✅ Run plan", payload={"v": "yes"}),
+            cl.Action(name="no", value="no", label="❌ Cancel", payload={"v": "no"}),
+        ],
+        timeout=120,
+    ).send()
+    if not confirm or confirm.get("payload", {}).get("v") != "yes":
+        await cl.Message(content="Plan cancelled.").send()
+        return
+
+    # ── Collect $ASK values up front (one prompt per unique param name) ──
+    ask_values: dict[str, str] = {}
+    ask_needed: list[str] = []
+    for step in plan:
+        for pname, pval in step["inputs"].items():
+            if isinstance(pval, str) and pval.strip() == "$ASK" and pname not in ask_needed:
+                ask_needed.append(pname)
+    for pname in ask_needed:
+        prefill = context.get(pname, "")
+        hint_note = f" _(suggested: `{prefill}`)_" if prefill else ""
+        cl.user_session.set("awaiting_manual_input", True)
+        try:
+            res = await cl.AskUserMessage(
+                content=f"Value for **{pname}**{hint_note}:", timeout=300
+            ).send()
+        finally:
+            cl.user_session.set("awaiting_manual_input", False)
+        raw = (res.get("output", "").strip() if res else "")
+        ask_values[pname] = raw or prefill
+
+    plan_outputs: dict[str, dict] = {}
+    cl.user_session.set("skill_running", True)
+    try:
+        for i, step in enumerate(plan, 1):
+            skill_name = step["skill"]
+            try:
+                skill = load_skill(skill_name)
+            except Exception as exc:
+                await cl.Message(content=f"❌ Step {i}: could not load `{skill_name}`: {exc}").send()
+                continue
+
+            # ── Determine iteration set for for_each steps ──
+            iterations: list[dict[str, str]] = []
+            if step.get("for_each"):
+                # Find the $FROM input that drives the loop
+                loop_param = None
+                loop_ref = None
+                for pname, pval in step["inputs"].items():
+                    if isinstance(pval, str) and pval.startswith("$FROM:"):
+                        loop_param, loop_ref = pname, pval[len("$FROM:"):].strip()
+                        break
+                if loop_param and loop_ref:
+                    ref_skill, _, ref_field = loop_ref.partition(".")
+                    source_text = _lookup_field(ref_skill, ref_field, plan_outputs)
+                    items = _extract_list_from_text(source_text)
+                    if not items:
+                        await cl.Message(
+                            content=f"⚠️ Step {i} `{skill_name}`: no items found in `{ref_skill}` to iterate over."
+                        ).send()
+                        continue
+                    for item in items:
+                        params = {}
+                        for pn, pv in step["inputs"].items():
+                            if pn == loop_param:
+                                params[pn] = item
+                            elif isinstance(pv, str) and pv.strip() == "$ASK":
+                                params[pn] = ask_values.get(pn, "")
+                            else:
+                                params[pn] = _resolve_input_value(pv, ask_values, context, plan_outputs)
+                        iterations.append(params)
+            if not iterations:
+                # Single run
+                params = {}
+                for pn, pv in step["inputs"].items():
+                    if isinstance(pv, str) and pv.strip() == "$ASK":
+                        params[pn] = ask_values.get(pn, "")
+                    else:
+                        params[pn] = _resolve_input_value(pv, ask_values, context, plan_outputs)
+                iterations = [params]
+
+            await cl.Message(
+                content=f"▶️ **Step {i}/{len(plan)}**: `{skill_name}` × {len(iterations)} run(s)"
+            ).send()
+            await emit_dashboard_update(skill_name, {}, status="loading")
+
+            last_outputs: dict = {}
+            for j, params in enumerate(iterations, 1):
+                if len(iterations) > 1:
+                    await cl.Message(content=f"  ↳ {j}/{len(iterations)}: {params or 'no inputs'}").send()
+                _run_id = log_start(skill_name, display_name=skill.get("name", skill_name), params=params)
+                _status, _err = "error", None
+                try:
+                    result = await run_skill(skill, params, _headless_ask_user)
+                    _status = "stopped" if result.get("stopped") else "success"
+                    outputs = await process_skill_outputs(skill_name, skill, result, stream=False)
+                    last_outputs = outputs or last_outputs
+                    if outputs:
+                        # Key per-item results so later steps can reference them
+                        mem_key = f"{skill_name}_{list(params.values())[0]}" if len(iterations) > 1 and params else skill_name
+                        save_result(mem_key, outputs)
+                        save_result(skill_name, outputs)
+                        context.update(outputs)
+                except Exception as exc:
+                    _err = str(exc)
+                    await cl.Message(content=f"  ⚠️ Run failed: {exc}").send()
+                finally:
+                    log_end(_run_id, status=_status, outputs=last_outputs, error=_err)
+
+            plan_outputs[skill_name] = last_outputs
+            await emit_dashboard_update(
+                skill_name, last_outputs, status="" if last_outputs else "no-output"
+            )
+
+        cl.user_session.set("skill_context", context)
+        await cl.Message(content="✅ **Plan complete.**").send()
+    finally:
+        cl.user_session.set("skill_running", False)
+
+    await emit_kpis()
+    skills = cl.user_session.get("skills") or []
+    reset_chat_history(skills)
+
+
 async def run_selected_skill(skill_name: str, inline_hint: str = "") -> None:
     skill = load_skill(skill_name)
 
@@ -875,6 +1206,7 @@ async def run_selected_skill(skill_name: str, inline_hint: str = "") -> None:
             cl.user_session.set("skill_context", context)
             save_result(skill_name, all_outputs)
             await emit_dashboard_update(skill_name, all_outputs)
+            await emit_kpis()
 
     finally:
         cl.user_session.set("skill_running", False)
@@ -1006,6 +1338,9 @@ async def start():
         await cl.Message(content=f"Saved skills: {skill_list}").send()
 
     await show_home(skills)
+
+    # Show KPI strip immediately from any cached data, then refresh after startup skills.
+    await emit_kpis()
 
     # Run startup skills in the background so the UI is responsive immediately.
     asyncio.create_task(run_startup_skills())
@@ -1223,6 +1558,18 @@ async def on_message(message: cl.Message):
         runs = recent_runs(limit=limit, skill_name=skill_filter)
         header = f"**Audit log** ({len(runs)} most recent{f' for `{skill_filter}`' if skill_filter else ''})\n\n"
         await cl.Message(content=header + format_audit_summary(runs)).send()
+        return
+
+    # ── Goal-driven multi-skill planning: /goal <objective> or /plan <objective> ──
+    if content.lower().startswith(("/goal ", "/plan ")):
+        goal_text = content.split(" ", 1)[1].strip()
+        if not goal_text:
+            await cl.Message(content="Usage: `/goal <what you want to achieve>`").send()
+            return
+        await cl.Message(content=f"🧠 Planning how to achieve: _{goal_text}_ …").send()
+        catalog = skill_catalog()
+        plan = await asyncio.to_thread(plan_goal, goal_text, catalog)
+        await execute_plan(goal_text, plan)
         return
 
     # Check if user is confirming delete (do this FIRST, before any other checks)

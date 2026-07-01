@@ -1,8 +1,8 @@
 {
   "name": "SFDC: Search Opportunity",
-  "description": "Search for an opportunity in Salesforce by DID number. Uses a saved SF session (sf_state.json) to skip the login flow entirely — no SSO redirect, no 35-second wait.",
+  "description": "Search for an opportunity in Salesforce by DID number. Uses a saved SF session (state_sf.json) to skip the login flow entirely — no SSO redirect, no 35-second wait.",
   "created": "2026-06-30",
-  "auth_state": "sf_state.json",
+  "auth_state": "state_sf.json",
   "steps": [
     {
       "action": "navigate",

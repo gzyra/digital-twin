@@ -2,10 +2,9 @@ import json
 import os
 from datetime import datetime, timezone
 
-import yaml
+from core.config import get_config
 
-with open("config.yaml") as f:
-    _CFG = yaml.safe_load(f)
+_CFG = get_config()
 
 SKILLS_DIR = _CFG["skills_dir"]
 os.makedirs(SKILLS_DIR, exist_ok=True)
@@ -41,7 +40,7 @@ def list_skills() -> list[str]:
 def skill_parameters(skill: dict) -> dict[str, str]:
     """Return {param_name: default_value} for all parameter_input steps."""
     params = {}
-    for step in skill["steps"]:
+    for step in skill.get("steps", []):
         if step.get("action") == "parameter_input" and step.get("param_name"):
             params[step["param_name"]] = step.get("value", "")
     return params
@@ -54,7 +53,7 @@ def skill_inputs(skill: dict) -> list[dict]:
     # Derive from parameter_input steps (deduplicated, preserve order)
     seen: set[str] = set()
     inputs = []
-    for step in skill["steps"]:
+    for step in skill.get("steps", []):
         if step.get("action") == "parameter_input":
             pname = step.get("param_name")
             if pname and pname not in seen:
@@ -71,7 +70,7 @@ def skill_auto_params(skill: dict) -> list[dict]:
     """Return param info for all parameter_input steps (used for auto-fill from inline hints)."""
     seen: set[str] = set()
     result = []
-    for step in skill["steps"]:
+    for step in skill.get("steps", []):
         if step.get("action") == "parameter_input":
             pname = step.get("param_name")
             if pname and pname not in seen:
@@ -96,10 +95,16 @@ def skill_description(skill: dict) -> str:
 
 
 def skill_catalog() -> list[dict]:
-    """Return a list of {file_name, display_name, description} for all skills.
+    """Return enriched metadata for all skills: name, description, inputs, outputs.
 
-    Used by the LLM intent selector so it can pick the right skill from a
-    natural-language request without needing exact name matching.
+    The outputs list exposes every named field a skill can produce so the LLM
+    can suggest running a skill when the user asks for data the skill provides.
+
+    Routing metadata for the planner:
+      - ``requires``   — parameter names the skill needs (declared or derived from inputs)
+      - ``provides``   — output field names the skill yields (declared or derived from outputs)
+      - ``goal_tags``  — free-text intents the skill satisfies (optional)
+      - ``system``     — target system label (e.g. cxaia, salesforce), optional
     """
     catalog = []
     for file_name in list_skills():
@@ -107,15 +112,63 @@ def skill_catalog() -> list[dict]:
             skill = load_skill(file_name)
             inputs = skill_inputs(skill)
             input_names = [i["name"] for i in inputs] if inputs else []
+            # Collect output field names and descriptions from parsed outputs
+            output_fields = []
+            for out in skill.get("outputs", []):
+                if out.get("parse") and out.get("fields"):
+                    for f in out["fields"]:
+                        output_fields.append({
+                            "name": f["name"],
+                            "description": f.get("description", ""),
+                        })
+                else:
+                    output_fields.append({
+                        "name": out["name"],
+                        "description": out.get("label", ""),
+                    })
+            provides = skill.get("provides") or [o["name"] for o in output_fields]
+            requires = skill.get("requires") or input_names
             catalog.append({
                 "file_name": file_name,
                 "display_name": skill.get("name", file_name),
                 "description": skill.get("description", ""),
                 "inputs": input_names,
+                "outputs": output_fields,
+                "requires": requires,
+                "provides": provides,
+                "goal_tags": skill.get("goal_tags", []),
+                "system": skill.get("system", ""),
             })
-        except Exception:
-            pass
+        except Exception as exc:
+            import logging
+            logging.warning("[skills] could not load skill %r: %s", file_name, exc)
     return catalog
+
+
+def routing_table(catalog: list[dict] | None = None) -> str:
+    """Build a compact, LLM-friendly routing table from the skill catalog.
+
+    Each line tells the model which skill to use for a given need, what it
+    requires as input, and what data it provides — so the assistant can pick
+    the right skill and chain skills whose ``provides`` feed another's
+    ``requires``. Generated from skill metadata so it stays in sync as skills
+    are added manually.
+    """
+    catalog = catalog if catalog is not None else skill_catalog()
+    if not catalog:
+        return "No skills available."
+
+    lines: list[str] = []
+    for e in catalog:
+        desc = e.get("description") or e.get("display_name")
+        requires = ", ".join(e.get("requires") or []) or "nothing"
+        provides = ", ".join(e.get("provides") or []) or "—"
+        tags = ", ".join(e.get("goal_tags") or [])
+        line = f"- `{e['file_name']}` — {desc}\n    · needs: {requires}\n    · gives: {provides}"
+        if tags:
+            line += f"\n    · use when: {tags}"
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def delete_skill(name: str) -> None:
