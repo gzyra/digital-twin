@@ -1,12 +1,15 @@
 {
   "name": "TOP 10 DIDs by ATR",
+  "description": "Fetch the top 10 deals by ATR from CX AIA. Runs at startup and caches results. Cached output is injected into the LLM system prompt for conversation context.",
   "created": "2026-06-25",
   "steps": [
     {
+      "description": "Navigate to CX AIA assistant",
       "action": "navigate",
       "url": "https://cxassistant.cisco.com/"
     },
     {
+      "description": "Click textarea to focus",
       "action": "click",
       "selector": "textarea",
       "value": null,
@@ -14,6 +17,7 @@
       "url": "https://cxassistant.cisco.com/threads"
     },
     {
+      "description": "Send prompt for top 10 deals by ATR",
       "action": "manual_input",
       "selector": "textarea",
       "value": "Show me my ATR and list my top 10 deals by ATR within 6-18 months",
@@ -21,12 +25,14 @@
       "human_in_the_loop": false
     },
     {
+      "description": "Wait for results table to render in chat",
       "action": "wait_for_selector",
       "selector": "pol-ai-chat-message-actions button:nth-child(3)",
       "state": "visible",
       "timeout_s": 120
     },
     {
+      "description": "Click export button to copy results to clipboard",
       "action": "wait_and_click_last",
       "selector": "pol-ai-chat-message-actions button:nth-child(3)",
       "scroll_into_view": true,

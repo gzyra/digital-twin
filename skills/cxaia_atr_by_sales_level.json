@@ -8,10 +8,12 @@
   "created": "2026-07-01",
   "steps": [
     {
+      "description": "Navigate to CX AIA assistant",
       "action": "navigate",
       "url": "https://cxassistant.cisco.com/"
     },
     {
+      "description": "Click textarea to focus",
       "action": "click",
       "selector": "textarea",
       "value": null,
@@ -19,6 +21,7 @@
       "url": "https://cxassistant.cisco.com/threads"
     },
     {
+      "description": "Input parameter: sales_level",
       "action": "parameter_input",
       "selector": "textarea",
       "param_name": "sales_level",
@@ -27,6 +30,7 @@
       "press_enter": false
     },
     {
+      "description": "Input parameter: time_frame",
       "action": "parameter_input",
       "selector": "textarea",
       "param_name": "time_frame",
@@ -35,6 +39,7 @@
       "press_enter": false
     },
     {
+      "description": "Input parameter: business_entity",
       "action": "parameter_input",
       "selector": "textarea",
       "param_name": "business_entity",
@@ -43,18 +48,21 @@
       "press_enter": false
     },
     {
+      "description": "Send prompt to CX AIA with all parameters",
       "action": "input_text",
       "selector": "textarea",
       "template": "\n\nSales Level: {sales_level}\n\nTime Frame: {time_frame}\n\nBusiness Entity: {business_entity}\n\n---\n\nYou are a Cisco CX Business Insights Assistant. I want you to show me the complete ATR (in $) value for the specified Sales Level, the specified Time Frame, and the specified Business Entity. Along with that generate a list of Top 10 unique deal IDs (as per ATR $) for the same criteria.\n\nIf Business Entity is blank, consider all Business Entities.\n\nOUTPUT:\nSales Level: [Resolved]\nTime Period: [Expanded Fiscal Period]\nTotal ATR Value: $X,XXX,XXX\n\nTop 10 opportunities\n| Rank | Customer | Deal ID | Architecture | Stage Name | Contract Expiration Date | Expected Total ATR ($) |",
       "press_enter": true
     },
     {
+      "description": "Wait for results to render in chat",
       "action": "wait_for_selector",
       "selector": "pol-ai-chat-message-actions button:nth-child(3)",
       "state": "visible",
       "timeout_s": 120
     },
     {
+      "description": "Click export button to copy results to clipboard",
       "action": "wait_and_click_last",
       "selector": "pol-ai-chat-message-actions button:nth-child(3)",
       "scroll_into_view": true,

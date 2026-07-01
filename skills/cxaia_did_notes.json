@@ -1,12 +1,14 @@
 {
-  "name": "CX AIA DID Overview",
+  "name": "CX AIA DID Notes",
   "created": "2026-06-17T12:56:16.678865+00:00",
   "steps": [
     {
+      "description": "Navigate to CX AIA assistant",
       "action": "navigate",
       "url": "https://cxassistant.cisco.com/"
     },
     {
+      "description": "Click textarea to focus",
       "action": "click",
       "selector": "textarea",
       "value": null,
@@ -14,6 +16,7 @@
       "url": "https://cxassistant.cisco.com/threads"
     },
     {
+      "description": "Input parameter: deal_id and send case notes prompt",
       "action": "parameter_input",
       "selector": "textarea",
       "param_name": "deal_id",
@@ -23,12 +26,14 @@
       "press_enter": true
     },
     {
+      "description": "Wait for case notes to render in chat",
       "action": "wait_for_selector",
       "selector": "pol-ai-chat-message-actions button:nth-child(3)",
       "state": "visible",
       "timeout_s": 120
     },
     {
+      "description": "Click export button to copy notes to clipboard",
       "action": "wait_and_click_last",
       "selector": "pol-ai-chat-message-actions button:nth-child(3)",
       "scroll_into_view": true,
@@ -79,7 +84,6 @@
       ]
     }
   ],
-  "description": "Retrieve the Deal Pulse notes and insights for a specific DID from CX AIA. Use this to check recorded risks, flags and recommendations for a deal.",
   "requires": ["deal_id"],
   "provides": ["deal_id", "customer_name", "deal_stage", "deal_value", "close_date", "owner", "product_family", "summary"],
   "goal_tags": ["deal pulse", "ai insights", "case notes", "risks", "flags", "recommendations", "deal summary", "pulse notes", "adoption risk"],

@@ -1,29 +1,34 @@
 {
-  "name": "SFDC: Search Opportunity",
-  "description": "Search for an opportunity in Salesforce by DID number. Uses a saved SF session (state_sf.json) to skip the login flow entirely — no SSO redirect, no 35-second wait.",
+  "name": "SFDC: Get DID Details",
+  "description": "Retrieve Salesforce opportunity details for a specific, known DID. Uses a saved SF session (state_sf.json) to skip the login flow entirely — no SSO redirect, no 35-second wait.",
   "created": "2026-06-30",
   "auth_state": "state_sf.json",
   "steps": [
     {
+      "description": "Navigate to Salesforce Lightning (expects logged-in session)",
       "action": "navigate",
       "url": "https://ciscosales.lightning.force.com"
     },
     {
+      "description": "Wait for global header to load",
       "action": "wait_for_selector",
       "selector": ".slds-global-header",
       "timeout_s": 30
     },
     {
+      "description": "Click Search button",
       "action": "click",
       "selector": "button[aria-label='Search']"
     },
     {
+      "description": "Wait for search input field to appear",
       "action": "wait_for_selector",
       "selector": "input.search-input, input[placeholder='Search...']",
       "timeout_s": 10,
       "state": "visible"
     },
     {
+      "description": "Enter DID parameter into search box",
       "action": "parameter_input",
       "selector": "input.search-input, input[placeholder='Search...']",
       "param_name": "did",
@@ -32,45 +37,40 @@
       "press_enter": true
     },
     {
+      "description": "Wait for search results to load",
       "action": "wait",
       "seconds": 10
     },
     {
+      "description": "Click opportunity record link in search results",
       "action": "locator_click",
-      "label": "Click search results tab containing DID",
-      "selector": "a:has-text('{did}')",
+      "label": "Click opportunity record link",
+      "selector": "a[data-special-link='true'].outputLookupLink",
       "click_method": "js",
-      "timeout_s": 30
-    },
-    {
-      "action": "locator_click",
-      "label": "Click opportunity record link (outputLookupLink)",
-      "selector": "a[class*='outputLookupLink']",
       "timeout_s": 20
     },
     {
-      "action": "wait_for_selector",
-      "selector": ".slds-page-header",
-      "timeout_s": 20
-    },
-    {
+      "description": "Wait for page to settle",
       "action": "wait",
       "seconds": 3
     },
     {
+      "description": "Click Details tab",
       "action": "locator_click",
       "label": "Click Details tab",
-      "selector": "a[data-label='Details'][role='tab']",
+      "selector": "a[data-label='Details']",
       "click_method": "js",
       "timeout_s": 20
     },
     {
+      "description": "Wait for Details tab content to load",
       "action": "wait_for_selector",
       "selector": ".slds-tabs_default__content.slds-show",
       "timeout_s": 20,
       "state": "visible"
     },
     {
+      "description": "Final wait before extracting details",
       "action": "wait",
       "seconds": 2
     }
@@ -103,9 +103,9 @@
       ]
     }
   ],
-  "description": "Search for an opportunity in Salesforce by DID number. Uses a saved SF session (state_sf.json) to skip the login flow entirely — no SSO redirect, no 35-second wait.",
+  "description": "Retrieve Salesforce opportunity details for a specific, known DID. Uses a saved SF session (state_sf.json) to skip the login flow entirely — no SSO redirect, no 35-second wait.",
   "requires": ["did"],
   "provides": ["account_name", "deal_id", "forecasting_position", "opportunity_owner", "opportunity_name", "stage", "forecast_status", "opportunity_notes", "close_date", "prior_contract_expiration_date"],
-  "goal_tags": ["search salesforce", "find opportunity", "browse deals", "salesforce search", "opportunity lookup by name or account", "opportunity notes", "oppty notes", "deal notes from salesforce"],
+  "goal_tags": ["retrieve opportunity details", "get deal info", "opportunity notes", "oppty notes", "deal details from salesforce", "renewal opportunity"],
   "system": "salesforce"
 }

@@ -1,12 +1,14 @@
 {
-  "name": "CX AIA DID Overview",
+  "name": "CX AIA DID Overview",  "description": "Full risk & adoption overview for a specific deal (DID) from CX AIA. Includes adoption score, TAC engagement, deal pulse, and top risk factors.",
   "created": "2026-06-17T12:56:16.678865+00:00",
   "steps": [
     {
+      "description": "Navigate to CX AIA assistant",
       "action": "navigate",
       "url": "https://cxassistant.cisco.com/"
     },
     {
+      "description": "Click textarea to focus",
       "action": "click",
       "selector": "textarea",
       "value": null,
@@ -14,6 +16,7 @@
       "url": "https://cxassistant.cisco.com/threads"
     },
     {
+      "description": "Input parameter: did (Deal ID number)",
       "action": "parameter_input",
       "selector": "textarea",
       "param_name": "deal_id",
@@ -23,12 +26,14 @@
       "press_enter": true
     },
     {
+      "description": "Wait for results to render in chat",
       "action": "wait_for_selector",
       "selector": "pol-ai-chat-message-actions button:nth-child(3)",
       "state": "visible",
       "timeout_s": 120
     },
     {
+      "description": "Click export button to copy results to clipboard",
       "action": "wait_and_click_last",
       "selector": "pol-ai-chat-message-actions button:nth-child(3)",
       "scroll_into_view": true,
