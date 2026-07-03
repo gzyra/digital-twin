@@ -48,6 +48,7 @@
       "type": "clipboard",
       "label": "Did Details",
       "parse": true,
+      "parse_instructions": "Extract the requested fields from case notes output. Preserve identifiers, names, dates, and value fields exactly. Put key narrative insights in summary without adding facts not present in source text. Return null for missing fields.",
       "fields": [
         {
           "name": "deal_id",

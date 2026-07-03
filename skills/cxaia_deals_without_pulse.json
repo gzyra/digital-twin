@@ -67,14 +67,15 @@
       "name": "deals_without_pulse_results",
       "type": "clipboard",
       "parse": true,
+      "parse_instructions": "Extract the requested fields from the CX AIA output. Preserve renewal_opportunities_table and red_deals_action_plan_table as valid markdown tables with original headers and row order. Keep business_entity, fiscal_period, and sales_theater exactly as resolved in the response. Return numeric counts as plain numbers when available; otherwise return null.",
       "fields": [
-        {"name": "renewal_opportunities_table"},
-        {"name": "red_deals_action_plan_table"},
-        {"name": "business_entity"},
-        {"name": "fiscal_period"},
-        {"name": "sales_theater"},
-        {"name": "total_deals_identified"},
-        {"name": "red_deals_count"}
+        {"name": "renewal_opportunities_table", "description": "Markdown table of renewal opportunities without deal pulse"},
+        {"name": "red_deals_action_plan_table", "description": "Markdown table listing red deals and recommended actions"},
+        {"name": "business_entity", "description": "Resolved business entity used for filtering"},
+        {"name": "fiscal_period", "description": "Resolved fiscal period used for filtering"},
+        {"name": "sales_theater", "description": "Resolved sales theater used for filtering"},
+        {"name": "total_deals_identified", "description": "Total number of deals identified in the result set"},
+        {"name": "red_deals_count", "description": "Total number of red deals identified"}
       ]
     }
   ]

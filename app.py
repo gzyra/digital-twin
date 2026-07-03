@@ -169,6 +169,13 @@ def _is_markdown_table(value: str) -> bool:
 
 def _display_value(v: str) -> str:
     """Return a concise display string for an output value (for the chat message)."""
+    if not isinstance(v, str):
+        try:
+            v = json.dumps(v, ensure_ascii=True)
+        except Exception:
+            v = str(v)
+    if "\n" in v or "## " in v or "### " in v:
+        return "*(formatted text output)*"
     if _is_markdown_table(v):
         # Count data rows: pipe lines that are not the header or separator
         data_rows = [
@@ -186,17 +193,29 @@ async def _collect_parsed_fields(out_def: dict, raw_value: str) -> dict[str, str
     """Use the LLM to parse a raw output value into named fields. Returns {} on failure."""
     fields: list[dict] = out_def.get("fields", [])
     field_lines = (
-        "\n".join(f'- "{f["name"]}": {f["description"]}' for f in fields)
+        "\n".join(
+            f'- "{f.get("name")}": {f.get("description", "No description provided; infer from field name.")}'
+            for f in fields
+            if f.get("name")
+        )
         if fields
         else "Extract all meaningful key/value pairs."
     )
+    parse_instructions = str(out_def.get("parse_instructions", "")).strip()
+    system_msg = (
+        "You are a data extraction assistant. "
+        "Parse the following markdown text and extract the requested fields. "
+        "Format every field value as clean GitHub-flavored Markdown so it renders well in the UI: "
+        "use **bold** labels, `##`/`###` headings for sections, bullet lists where helpful, and "
+        "proper Markdown tables (a header row plus a `---` separator row) for any tabular data. "
+        "Preserve existing Markdown structure; do not flatten tables into prose. "
+        "Reply ONLY with a valid JSON object. Use null for missing fields. "
+        f"Fields to extract:\n{field_lines}"
+    )
+    if parse_instructions:
+        system_msg += f"\n\nAdditional parsing instructions:\n{parse_instructions}"
     parse_prompt = [
-        {"role": "system", "content": (
-            "You are a data extraction assistant. "
-            "Parse the following markdown text and extract the requested fields. "
-            "Reply ONLY with a valid JSON object. Use null for missing fields. "
-            f"Fields to extract:\n{field_lines}"
-        )},
+        {"role": "system", "content": system_msg},
         {"role": "user", "content": raw_value},
     ]
     loop = asyncio.get_running_loop()
@@ -245,6 +264,7 @@ async def process_skill_outputs(
     When stream=False (headless/startup run), skips user-facing messages.
     """
     declared = {out["name"]: result["outputs"].get(out["name"], "") for out in skill_outputs(skill)}
+    ui_declared = dict(declared)
 
     # Parse declared outputs that have parse=true.
     # Skip LLM extraction for table outputs with no explicit fields (preserve structure).
@@ -259,7 +279,22 @@ async def process_skill_outputs(
             continue  # Table with no field spec — keep raw; JS renders it
         try:
             fields = await _collect_parsed_fields(out_def, raw_value)
+            # Normalize escaped newlines and soft-broken markdown for human-readable fields.
+            for k, v in list(fields.items()):
+                if not isinstance(v, str):
+                    continue
+                if k.endswith("_formatted"):
+                    pretty = v.replace("\\n", "\n").strip()
+                    pretty = re.sub(r"\s+(##\s)", r"\n\1", pretty)
+                    pretty = re.sub(r"\s+(###\s)", r"\n\1", pretty)
+                    pretty = re.sub(r"\s+(\*\*[^*\n:]{1,80}:\*\*)", r"\n\1", pretty)
+                    pretty = re.sub(r"\n{3,}", "\n\n", pretty)
+                    fields[k] = pretty
             parsed_fields.update(fields)
+            # For parse-enabled outputs with explicit structured fields, hide the raw source
+            # payload from chat/dashboard to avoid noisy objects like [object Object].
+            if fields and out_def.get("fields") and not out_def.get("keep_raw_output", False):
+                ui_declared.pop(out_def["name"], None)
         except Exception as exc:
             if stream:
                 await cl.Message(content=f"⚠️ Could not parse `{out_def['name']}`: {exc}").send()
@@ -318,16 +353,44 @@ async def process_skill_outputs(
                 if k and v and v.lower() != "no extractable output":
                     llm_extracted[k] = v
 
-    all_outputs = {**declared, **parsed_fields, **llm_extracted}
+    all_outputs = {**ui_declared, **parsed_fields, **llm_extracted}
 
     if stream:
         if all_outputs:
-            display_lines = "\n".join(
-                f"- **{k}**: {_display_value(v)}" for k, v in all_outputs.items()
-            )
-            await cl.Message(
-                content=f"📤 **Outputs from `{skill_name}`:**\n{display_lines}\n\nThese are saved in context for the next skill."
-            ).send()
+            # Split outputs into rich Markdown (rendered fully) and scalar (compact list).
+            # Anything that is a Markdown table, a *_formatted field, or multi-line Markdown
+            # is rendered in full so Chainlit's Markdown renderer displays it properly
+            # (tables become HTML tables, headings/bold render, etc.).
+            rich_sections: list[str] = []
+            scalar_items: list[tuple[str, str]] = []
+            for k, v in all_outputs.items():
+                key_is_formatted = isinstance(k, str) and k.endswith("_formatted")
+                val_is_table = _is_markdown_table(v)
+                val_is_markdown = isinstance(v, str) and (
+                    "## " in v or "### " in v or "\n" in v or "\\n" in v
+                )
+                if key_is_formatted or val_is_table or val_is_markdown:
+                    pretty = v.replace("\\n", "\n").strip() if isinstance(v, str) else str(v)
+                    if not pretty:
+                        continue
+                    # Keep chat responsive while still showing meaningful formatted content.
+                    if len(pretty) > 8000:
+                        pretty = pretty[:8000].rstrip() + "\n\n...[truncated]"
+                    title = k.replace("_formatted", "").replace("_", " ").strip().title()
+                    rich_sections.append(f"### {title}\n{pretty}")
+                else:
+                    scalar_items.append((k, v))
+
+            parts_out: list[str] = [f"📤 **Outputs from `{skill_name}`:**"]
+            if scalar_items:
+                parts_out.append(
+                    "\n".join(f"- **{k}**: {_display_value(v)}" for k, v in scalar_items)
+                )
+            if rich_sections:
+                parts_out.append("\n\n".join(rich_sections))
+            parts_out.append("These are saved in context for the next skill.")
+
+            await cl.Message(content="\n\n".join(parts_out)).send()
         else:
             await cl.Message(content="ℹ️ No structured output captured from this skill.").send()
 

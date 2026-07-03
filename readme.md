@@ -1,3 +1,6 @@
+# PYTHONPATH=. python core/replay.py
+
+
 # RRA Digital Twin — AI Agent
 
 Browser automation skill recorder and replay UI with an integrated LLM chat assistant, live dashboard, and execution audit log.

@@ -1,0 +1,89 @@
+{
+  "name": "Cisco Ready: Part Serial Number Search",
+  "description": "Search for and retrieve part/device serial number details from Cisco Ready. Enter a serial number to look up device information, configuration, warranty status, and support history. Provides complete hardware asset details for a specific part.",
+  "created": "2026-07-01",
+  "auth_state": "state_ciscoready.json",
+  "steps": [
+    {
+      "description": "Navigate to Cisco Ready SN Search page",
+      "action": "navigate",
+      "url": "https://ciscoready.cloudapps.cisco.com/#/search/intent/Download_Report"
+    },
+    {
+      "description": "Wait for radio button to become visible, Search based on SAV ID",
+      "action": "wait_for_selector",
+      "selector": "#mat-radio-3 .mat-radio-inner-circle",
+      "timeout_s": 10,
+      "state": "visible"
+    },
+    {
+      "description": "Click Select dropdown",
+      "action": "click",
+      "selector": "div.c-btn[tabindex='0']:has-text('Select')"
+    },
+    {
+      "description": "Enter SAV ID into search field",
+      "action": "parameter_input",
+      "selector": "#followup-0",
+      "param_name": "sav_id",
+      "param_description": "SAV ID to request IB in Cisco Ready",
+      "value": "",
+      "press_enter": false
+    },
+    {
+      "description": "Wait for page to process SAV ID and results to be ready",
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "description": "Select first SAV customer using keyboard",
+      "action": "key_sequence",
+      "keys": ["Tab", "Space"]
+    },
+    {
+      "description": "Select PROCEED using keyboard",
+      "action": "key_sequence",
+      "keys": ["Tab", "Space"]
+    },
+    {
+      "description": "Select Email delivery option",
+      "action": "locator_click",
+      "selector": "mat-radio-button:has-text('Email') label"
+    },
+    {
+      "description": "Select REQUEST using keyboard",
+      "action": "key_sequence",
+      "keys": ["Tab", "Tab", "Space"]
+    },
+    {
+      "description": "Wait for request submission confirmation",
+      "action": "wait_for_text",
+      "text": "submitted successfully",
+      "timeout_s": 30
+    },
+    {
+      "description": "Wait 10 seconds before finishing",
+      "action": "wait",
+      "seconds": 10
+    }
+  ],
+  "outputs": [
+    {
+      "name": "request_submission",
+      "type": "js_eval",
+      "label": "Request Submission",
+      "js": "(function() { var text = (document.body && (document.body.innerText || document.body.textContent) || '').replace(/\\r/g, ''); var requestMatch = text.match(/Your request for[\\s\\S]*?submitted successfully\\./i); var followupMatch = text.match(/You will get the report shortly\\.[\\s\\S]*?Thank you\\./i); var requestIdMatch = text.match(/Request ID\\s*([0-9]+)/i); var lines = []; if (requestMatch) lines.push(requestMatch[0].replace(/\\s+/g, ' ').trim()); if (followupMatch) lines.push(followupMatch[0].replace(/\\s+/g, ' ').trim()); var clickLine = /Click here to request another report/i.test(text) ? 'Click here to request another report' : ''; if (clickLine) lines.push(clickLine); return { request_id: requestIdMatch ? requestIdMatch[1] : '', confirmation_text: lines.join('\\n') || text.slice(0, 4000) }; })()",
+      "parse": true,
+      "parse_instructions": "Use confirmation_text and request_id to produce a final user-facing markdown summary. Format EXACTLY like this:\n## Cisco Ready Request Submitted\n**Status:** Submitted Successfully\n**Request ID:** <id or N/A>\n**Message:** <one-line confirmation summary>\n**Next Step:** You will receive the report shortly by email.\nDo not use semicolons or equals signs.",
+      "fields": [
+        {"name": "request_submitted_formatted", "description": "Human-readable markdown confirmation that request was submitted"},
+        {"name": "request_id",                  "description": "Request ID extracted from the success confirmation"},
+        {"name": "status",                      "description": "Submission status, expected value: Submitted Successfully"}
+      ]
+    }
+  ],
+  "requires": ["sav_id"],
+  "provides": ["request_submitted_formatted", "request_id", "status"],
+  "goal_tags": ["search serial number", "part serial number", "device lookup", "hardware details", "serial number lookup", "part details", "cisco ready", "device information", "warranty info"],
+  "system": "cisco_ready"
+}

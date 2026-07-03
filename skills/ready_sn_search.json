@@ -1,0 +1,70 @@
+{
+  "name": "Cisco Ready: Part Serial Number Search",
+  "description": "Search for and retrieve part/device serial number details from Cisco Ready. Enter a serial number to look up device information, configuration, warranty status, and support history. Provides complete hardware asset details for a specific part.",
+  "created": "2026-07-01",
+  "auth_state": "state_ciscoready.json",
+  "steps": [
+    {
+      "description": "Navigate to Cisco Ready SN Search page",
+      "action": "navigate",
+      "url": "https://ciscoready.cloudapps.cisco.com/#/search/intent/SN_Search"
+    },
+    {
+      "description": "Wait for radio button to become visible",
+      "action": "wait_for_selector",
+      "selector": "#mat-radio-3 > label > span.mat-radio-label-content",
+      "timeout_s": 10,
+      "state": "visible"
+    },
+    {
+      "description": "Click on radio button: Serial Number Search",
+      "action": "click",
+      "selector": "#mat-radio-3 > label > span.mat-radio-label-content"
+    },
+    {
+      "description": "Wait for page to process radio selection and field to be ready",
+      "action": "wait",
+      "seconds": 2
+    },
+    {
+      "description": "Enter serial number into search field",
+      "action": "parameter_input",
+      "selector": "#mat-input-0",
+      "param_name": "serial_number",
+      "param_description": "Serial number of the part/device to search for in Cisco Ready",
+      "value": "",
+      "press_enter": false
+    },
+    {
+      "description": "Click PROCEED button",
+      "action": "click",
+      "selector": "button:has-text('PROCEED')"
+    },
+    {
+      "description": "Wait for search results grid to be populated",
+      "action": "wait_for_selector",
+      "selector": ".ag-center-cols-container [role=\"gridcell\"]",
+      "timeout_s": 20,
+      "state": "visible"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "search_results",
+      "type": "js_eval",
+      "label": "Search Results",
+      "js": "(function() { var result = { columns: [], rows: [], rowCount: 0, success: false, debug: {}, error: null }; try { result.debug.timestamp = new Date().toISOString(); var root = document.querySelector('.ag-root'); result.debug.agRootFound = !!root; if (!root) root = document.querySelector('[role=\"grid\"]'); result.debug.roleGridFound = !!root; if (!root) { var allAg = document.querySelectorAll('[class*=\"ag-\"]'); result.debug.elementsWithAgClass = allAg.length; if (allAg.length > 0) root = allAg[0].closest('.ag-root, [role=\"grid\"]'); } result.debug.rootElement = root ? 'found' : 'NOT FOUND'; if (!root) { result.error = 'ag-grid root element not found'; return result; } var headerCells = Array.from(root.querySelectorAll('[role=\"columnheader\"]')); result.debug.headerCellsFound = headerCells.length; var headers = []; headerCells.forEach(function(cell) { var text = (cell.textContent || cell.innerText || '').trim(); if (text) headers.push(text); }); result.columns = headers; result.debug.columnNames = headers; var allRows = Array.from(root.querySelectorAll('[role=\"row\"]')); result.debug.totalRowsFound = allRows.length; var dataRows = []; allRows.forEach(function(row) { var isHeaderRow = !!row.querySelector('[role=\"columnheader\"]'); if (!isHeaderRow) { var cells = Array.from(row.querySelectorAll('[role=\"gridcell\"]')); var rowData = cells.map(function(cell) { return (cell.textContent || cell.innerText || '').trim(); }); if (rowData.some(function(v) { return v.length > 0; })) { dataRows.push(rowData); } } }); result.rows = dataRows; result.rowCount = dataRows.length; result.success = headers.length > 0 && dataRows.length > 0; result.debug.dataRowsFound = dataRows.length; if (!result.success) { result.debug.whyFailed = (headers.length === 0 ? 'no headers ' : '') + (dataRows.length === 0 ? 'no data rows' : ''); } } catch(e) { result.error = 'Exception: ' + e.toString(); result.debug.exception = true; } return result; })()",
+      "parse": true,
+      "parse_instructions": "Format the search results EXACTLY as follows. Start with '## Cisco Ready Search Results'. On next line: '**Total Results:** N' (where N is the rowCount). Then for EACH row: blank line, then '### Result X of Y', then EACH FIELD on its own line as '**FieldName:** fieldvalue'. Do NOT use semicolons or equals signs. Put each field on a NEW LINE. Use the columns array to get field names in order, then match values from results_data in the same position. Example: \n## Cisco Ready Search Results\n**Total Results:** 1\n\n### Result 1 of 1\n**Sales Level 6:** STR_DT_HUNGARY_HUN\n**SAV Name:** MAGYAR TELEKOM\n**SAVM Group ID:** 227847508\n**Active SAV:** Y",
+      "fields": [
+        {"name": "search_results_formatted", "description": "Human-readable formatted results with column names paired with values for each row"},
+        {"name": "total_results",            "description": "Total number of rows found"},
+        {"name": "success",                  "description": "Whether search was successful and returned data"}
+      ]
+    }
+  ],
+  "requires": ["serial_number"],
+  "provides": ["search_results_formatted", "total_results", "success"],
+  "goal_tags": ["search serial number", "part serial number", "device lookup", "hardware details", "serial number lookup", "part details", "cisco ready", "device information", "warranty info"],
+  "system": "cisco_ready"
+}

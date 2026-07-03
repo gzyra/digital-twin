@@ -55,6 +55,12 @@ def step_label(step: dict) -> str:
         return f"JS click: {step.get('label', step.get('js', '')[:60])}"
     if a == "locator_click":
         return f"Locator click: {step.get('label', step.get('selector', ''))}"
+    if a == "key_sequence":
+        keys = step.get("keys", [])
+        if isinstance(keys, list) and keys:
+            return f"Press keys: {' -> '.join(str(k) for k in keys)}"
+        key = step.get("key")
+        return f"Press key: {key}" if key else "Press key sequence"
     return a
 
 
@@ -208,6 +214,20 @@ async def _execute(page, step, params):
             await locator.click(force=True)
         else:
             await locator.click()
+        return
+    elif a == "key_sequence":
+        # Send one or more keyboard presses to the currently focused element.
+        # Examples:
+        #   {"action": "key_sequence", "keys": ["Tab", "Space"]}
+        #   {"action": "key_sequence", "key": "Enter"}
+        keys = step.get("keys")
+        if not isinstance(keys, list) or not keys:
+            single = step.get("key")
+            keys = [single] if single else []
+        if not keys:
+            raise ValueError("key_sequence requires 'keys' (list) or 'key' (string)")
+        for k in keys:
+            await page.keyboard.press(str(k))
         return
     elif a == "wait_and_click_last":
         # Wait for elements matching the selector, then click the last one.
@@ -378,6 +398,12 @@ async def run_skill(
                         await ctx.grant_permissions(["clipboard-read"])
                         value = await page.evaluate("async () => await navigator.clipboard.readText()")
                         result["outputs"][name] = (value or "").strip()
+                    elif out_type == "js_eval":
+                        # Execute arbitrary JS and return the result (string or JSON-serialisable)
+                        js = out.get("js", "")
+                        if js:
+                            value = await page.evaluate(js)
+                            result["outputs"][name] = value if value is not None else ""
                     else:
                         # Default: DOM selector
                         selector = out.get("selector")

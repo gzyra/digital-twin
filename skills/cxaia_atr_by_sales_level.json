@@ -77,6 +77,7 @@
       "type": "clipboard",
       "label": "ATR Results",
       "parse": true,
+      "parse_instructions": "Extract the requested fields from the CX AIA response. Preserve currency formatting for total_atr (including symbols and separators). Preserve opportunities_table as a valid markdown table with original headers and row order. Return null for any missing field.",
       "fields": [
         {
           "name": "total_atr",

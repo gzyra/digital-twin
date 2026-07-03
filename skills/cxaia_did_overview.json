@@ -48,6 +48,7 @@
       "type": "clipboard",
       "label": "Did Details",
       "parse": true,
+      "parse_instructions": "Extract each requested field from the deal overview response. Keep IDs, URLs, names, and dates exactly as shown. Keep summary concise but faithful to source text. Return null for missing fields.",
       "fields": [
         {
           "name": "deal_id",
